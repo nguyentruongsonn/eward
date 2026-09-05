@@ -1,0 +1,172 @@
+<?php
+
+namespace App\Services\Admin;
+
+use App\Models\HoSoXuLy;
+use App\Models\TrangThaiHoSo;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
+
+class AdminApplicationListService
+{
+    public const DEFAULT_SCOPE = 'default';
+
+    public const ALL_SCOPE = 'all';
+
+    public const RECEIVED_SCOPE = 'received';
+
+    public const PROCESSING_SCOPE = 'processing';
+
+    public const DIRECT_SCOPE = 'direct';
+
+    public const SUPPLEMENT_SCOPE = 'supplement';
+
+    public const COMPLETED_SCOPE = 'completed';
+
+    public const DELIVERED_SCOPE = 'delivered';
+
+    /** @return Collection<int, TrangThaiHoSo> */
+    public function statuses(): Collection
+    {
+        return TrangThaiHoSo::query()
+            ->orderBy('maTrangThai')
+            ->get();
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    public function paginate(
+        array $filters,
+        string $scope = self::DEFAULT_SCOPE,
+        int $perPage = 20,
+        ?string $sortColumn = null,
+        string $direction = 'desc',
+        ?array $visibleStatuses = null,
+    ): LengthAwarePaginator {
+        $query = HoSoXuLy::query()
+            ->with(['congdan.nguoi', 'tthc', 'trangThai', 'paymentHistories'])
+            ->whereRaw("maHSXL LIKE 'HSXL_%'")
+            ->whereNotNull('maHSXL')
+            ->where('maHSXL', '!=', '0')
+            ->where('maHSXL', '!=', '');
+
+        $this->applySearch($query, $filters);
+        $hasDateFilter = $this->applyDates($query, $filters);
+        $this->applyOverdue($query, $filters);
+        $this->applyScope($query, $filters, $scope, $hasDateFilter);
+        if ($visibleStatuses !== null) {
+            $query->whereIn('maTrangThai', $visibleStatuses);
+        }
+
+        $sortColumn ??= match ($scope) {
+            self::COMPLETED_SCOPE => 'ngayKetThucXuLy',
+            self::DELIVERED_SCOPE => 'ngayTra',
+            default => 'ngayTiepNhan',
+        };
+        $direction = strtolower($direction) === 'asc' ? 'asc' : 'desc';
+
+        return $query
+            ->orderBy($sortColumn, $direction)
+            ->orderByDesc('maHSXL')
+            ->paginate(max(1, min($perPage, 100)))
+            ->withQueryString();
+    }
+
+    private function applySearch($query, array $filters): void
+    {
+        if (! $this->filled($filters, 'search')) {
+            return;
+        }
+
+        $search = (string) $filters['search'];
+        $query->where(function ($inner) use ($search): void {
+            $inner->where('maHSXL', 'like', '%'.$search.'%')
+                ->orWhere('tenChuHoSo', 'like', '%'.$search.'%')
+                ->orWhere('email', 'like', '%'.$search.'%')
+                ->orWhere('soDienThoai', 'like', '%'.$search.'%');
+        });
+    }
+
+    private function applyDates($query, array $filters): bool
+    {
+        $hasDateFilter = $this->filled($filters, 'ngayTiepNhan_from') || $this->filled($filters, 'ngayTiepNhan_to');
+        if ($this->filled($filters, 'ngayTiepNhan_from')) {
+            $query->whereDate('ngayTiepNhan', '>=', $filters['ngayTiepNhan_from']);
+        }
+        if ($this->filled($filters, 'ngayTiepNhan_to')) {
+            $query->whereDate('ngayTiepNhan', '<=', $filters['ngayTiepNhan_to']);
+        }
+
+        return $hasDateFilter;
+    }
+
+    private function applyOverdue($query, array $filters): void
+    {
+        if (! $this->filled($filters, 'overdue')) {
+            return;
+        }
+
+        $isOverdue = filter_var($filters['overdue'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        if ($isOverdue === null) {
+            $isOverdue = (string) $filters['overdue'] === '1';
+        }
+
+        if ($isOverdue) {
+            $query->whereNotNull('ngayHenTra')
+                ->where('ngayHenTra', '<', now())
+                ->whereNotIn('maTrangThai', [9, 10, 3]);
+        }
+    }
+
+    private function applyScope($query, array $filters, string $scope, bool $hasDateFilter): void
+    {
+        if ($scope === self::ALL_SCOPE) {
+            if ($this->filled($filters, 'maTrangThai')) {
+                $query->where('maTrangThai', $filters['maTrangThai']);
+            }
+
+            return;
+        }
+
+        if ($scope === self::DEFAULT_SCOPE) {
+            if ($this->filled($filters, 'maTrangThai')) {
+                $query->where('maTrangThai', $filters['maTrangThai']);
+            } elseif (! $hasDateFilter) {
+                $query->where(static function ($inner): void {
+                    $inner->where('maTrangThai', 1)
+                        ->orWhere(static function ($withdrawn): void {
+                            $withdrawn->where('maTrangThai', 7)->whereNull('ngayTiepNhan');
+                        });
+                });
+            }
+
+            return;
+        }
+
+        match ($scope) {
+            self::RECEIVED_SCOPE => $query->where(static function ($inner): void {
+                $inner->where('maTrangThai', 2)
+                    ->orWhere(static function ($withdrawn): void {
+                        $withdrawn->where('maTrangThai', 7)->whereNotNull('ngayTiepNhan');
+                    });
+            }),
+            self::PROCESSING_SCOPE => $query->where(static function ($inner): void {
+                $inner->where('maTrangThai', 4)
+                    ->orWhere(static function ($withdrawn): void {
+                        $withdrawn->where('maTrangThai', 7)->where('maTrangThai_backup', 4);
+                    });
+            }),
+            self::DIRECT_SCOPE => $query->where('maTrangThai', 11),
+            self::SUPPLEMENT_SCOPE => $query->where('maTrangThai', 5),
+            self::COMPLETED_SCOPE => $query->where('maTrangThai', 9),
+            self::DELIVERED_SCOPE => $query->where('maTrangThai', 10),
+            default => null,
+        };
+    }
+
+    private function filled(array $filters, string $key): bool
+    {
+        return array_key_exists($key, $filters) && $filters[$key] !== null && trim((string) $filters[$key]) !== '';
+    }
+}
