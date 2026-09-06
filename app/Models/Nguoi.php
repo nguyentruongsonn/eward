@@ -36,6 +36,16 @@ class Nguoi extends Authenticatable implements JWTSubject
         'remember_token',
     ];
 
+    public function setVaiTroAttribute($value): void
+    {
+        $this->attributes['vaiTro'] = is_string($value) ? trim($value) : $value;
+    }
+
+    public function getVaiTroAttribute($value): ?string
+    {
+        return is_string($value) ? trim($value) : $value;
+    }
+
     protected function casts(): array
     {
         return [

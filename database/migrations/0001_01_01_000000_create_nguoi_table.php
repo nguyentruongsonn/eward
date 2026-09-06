@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('password')->nullable();
             $table->string('remember_token', 100)->nullable();
             $table->string('soDienThoai', 10);
-            $table->enum('vaiTro', ['Công dân/ Tổ chức', 'Cán bộ một cửa', 'Cán bộ thụ lý ', 'Lãnh đạo', 'Quản trị viên', 'Checkin']);
+            $table->enum('vaiTro', ['Công dân/ Tổ chức', 'Cán bộ một cửa', 'Cán bộ thụ lý', 'Lãnh đạo', 'Quản trị viên', 'Checkin']);
         });
     }
 

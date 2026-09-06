@@ -154,4 +154,9 @@ class HoSoXuLy extends Model
     {
         return $this->hasMany(LichSuThanhToan::class, 'maHSXL', 'maHSXL');
     }
+
+    public function workflowEvents()
+    {
+        return $this->hasMany(HoSoWorkflowEvent::class, 'maHSXL', 'maHSXL')->orderBy('created_at');
+    }
 }

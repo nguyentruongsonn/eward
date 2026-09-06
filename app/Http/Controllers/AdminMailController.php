@@ -6,6 +6,7 @@ use App\Exceptions\ApiException;
 use App\Services\Admin\AdminApplicationViewService;
 use App\Services\Admin\AdminAuthorizationService;
 use App\Services\Mail\ApplicationMailService;
+use App\Support\ApiResponse;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,7 +26,7 @@ class AdminMailController extends Controller
     public function sendMailHoSo(Request $request, string $maHSXL): JsonResponse
     {
         if (! $this->authorization->isAdmin(Auth::user())) {
-            return response()->json(['success' => false, 'message' => 'Bạn không có quyền truy cập.'], 403);
+            return ApiResponse::error('Bạn không có quyền truy cập.', 'FORBIDDEN', 403, [], $request);
         }
 
         $validated = $request->validate([
@@ -37,7 +38,7 @@ class AdminMailController extends Controller
         try {
             $application = $this->applications->findForAction($maHSXL);
             if (! $application->email) {
-                return response()->json(['success' => false, 'message' => 'Hồ sơ không có email.'], 422);
+                return ApiResponse::error('Hồ sơ không có email.', 'APPLICATION_EMAIL_MISSING', 422, [], $request);
             }
 
             $this->mailService->sendApplicationMail(
@@ -48,18 +49,16 @@ class AdminMailController extends Controller
                 $validated['loai_mail'],
             );
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Đã gửi mail thành công',
+            return ApiResponse::success([
                 'email' => $application->email,
                 'last_mail_sent_at' => optional($application->last_mail_sent_at)->format('d/m/Y H:i'),
-            ]);
+            ], 'Đã gửi mail thành công', 200, $request);
         } catch (ModelNotFoundException) {
-            return response()->json(['success' => false, 'message' => 'Không tìm thấy hồ sơ.'], 404);
+            return ApiResponse::error('Không tìm thấy hồ sơ.', 'NOT_FOUND', 404, [], $request);
         } catch (\Throwable $exception) {
             report($exception);
 
-            return response()->json(['success' => false, 'message' => 'Lỗi khi gửi mail.'], 500);
+            return ApiResponse::error('Lỗi khi gửi mail.', 'INTERNAL_SERVER_ERROR', 500, [], $request);
         }
     }
 
@@ -69,7 +68,7 @@ class AdminMailController extends Controller
     public function addMailReply(Request $request, string $maHSXL): JsonResponse
     {
         if (! $this->authorization->isAdmin(Auth::user())) {
-            return response()->json(['success' => false, 'message' => 'Bạn không có quyền truy cập.'], 403);
+            return ApiResponse::error('Bạn không có quyền truy cập.', 'FORBIDDEN', 403, [], $request);
         }
 
         $validated = $request->validate([
@@ -88,13 +87,13 @@ class AdminMailController extends Controller
                 'sent_at' => $validated['sent_at'] ?? now(),
             ]);
 
-            return response()->json(['success' => true, 'message' => 'Đã thêm email reply từ công dân']);
+            return ApiResponse::success(null, 'Đã thêm email reply từ công dân', 200, $request);
         } catch (ModelNotFoundException) {
-            return response()->json(['success' => false, 'message' => 'Không tìm thấy hồ sơ.'], 404);
+            return ApiResponse::error('Không tìm thấy hồ sơ.', 'NOT_FOUND', 404, [], $request);
         } catch (\Throwable $exception) {
             report($exception);
 
-            return response()->json(['success' => false, 'message' => 'Lỗi khi thêm email reply.'], 500);
+            return ApiResponse::error('Lỗi khi thêm email reply.', 'INTERNAL_SERVER_ERROR', 500, [], $request);
         }
     }
 

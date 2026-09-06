@@ -6,6 +6,7 @@ use App\Enums\HoSoStatus;
 use App\Enums\Role;
 use App\Exceptions\ApiException;
 use App\Models\CachThucHien;
+use App\Models\HoSoWorkflowEvent;
 use App\Models\HoSoXuLy;
 use App\Models\Nguoi;
 use Carbon\Carbon;
@@ -81,6 +82,8 @@ class HoSoWorkflowService
             $this->markAccepted($locked, $actor, $acceptedAt);
             $locked->save();
 
+            $this->recordEvent($locked, 'accepted', $actor, HoSoStatus::PendingReception->value, HoSoStatus::Accepted->value);
+
             return $locked->fresh(['trangThai', 'tthc']);
         });
     }
@@ -123,6 +126,8 @@ class HoSoWorkflowService
             $this->markAccepted($locked, $actor, $acceptedAt);
             $locked->save();
 
+            $this->recordEvent($locked, 'complete_direct_reception', $actor, HoSoStatus::DirectReception->value, HoSoStatus::Accepted->value);
+
             return $locked->fresh(['trangThai', 'tthc']);
         });
     }
@@ -152,6 +157,8 @@ class HoSoWorkflowService
             }
             $locked->save();
 
+            $this->recordEvent($locked, 'approved', $actor, HoSoStatus::Processing->value, HoSoStatus::Completed->value, $approvalComment ?: $note);
+
             return $locked->fresh(['trangThai', 'tthc']);
         });
     }
@@ -166,6 +173,7 @@ class HoSoWorkflowService
                 ]);
             }
 
+            $fromStatus = (int) $locked->maTrangThai;
             $locked->maTrangThai = HoSoStatus::ReworkRequested->value;
             $locked->nguoiDuyet = null;
             $locked->ngayDuyet = null;
@@ -173,13 +181,15 @@ class HoSoWorkflowService
             $locked->ghiChu = ($locked->ghiChu ?? '')."\n[".now()->format('d/m/Y H:i').'] '.$actor->vaiTro.' yêu cầu xử lý lại: '.$note;
             $locked->save();
 
+            $this->recordEvent($locked, 'rework_requested', $actor, $fromStatus, HoSoStatus::ReworkRequested->value, $note);
+
             return $locked->fresh(['trangThai', 'tthc']);
         });
     }
 
     public function forwardForApproval(HoSoXuLy $application, Nguoi $actor, ?string $note = null): HoSoXuLy
     {
-        return DB::transaction(function () use ($application, $note): HoSoXuLy {
+        return DB::transaction(function () use ($application, $actor, $note): HoSoXuLy {
             $locked = HoSoXuLy::query()->whereKey($application->getKey())->lockForUpdate()->firstOrFail();
             $current = HoSoStatus::tryFrom((int) $locked->maTrangThai);
             if (! in_array($current, [HoSoStatus::Accepted, HoSoStatus::ReworkRequested], true)) {
@@ -193,6 +203,8 @@ class HoSoWorkflowService
                 $locked->ghiChu = ($locked->ghiChu ?? '')."\n[".now()->format('d/m/Y H:i').'] '.$note;
             }
             $locked->save();
+
+            $this->recordEvent($locked, 'forwarded_for_approval', $actor, $current?->value, HoSoStatus::Processing->value, $note);
 
             return $locked->fresh(['trangThai', 'tthc']);
         });
@@ -245,6 +257,8 @@ class HoSoWorkflowService
 
             $locked->save();
 
+            $this->recordEvent($locked, 'transition', $actor, $current?->value, $target->value, $note);
+
             return $locked->fresh(['trangThai', 'tthc']);
         });
     }
@@ -272,8 +286,33 @@ class HoSoWorkflowService
             $locked->ghiChu = $locked->ghiChu === '' ? $line : $locked->ghiChu."\n".$line;
             $locked->save();
 
+            $this->recordEvent($locked, 'rejected', $actor, HoSoStatus::PendingReception->value, HoSoStatus::Rejected->value, $reason);
+
             return $locked->fresh(['trangThai', 'tthc']);
         });
+    }
+
+    private function recordEvent(
+        HoSoXuLy $application,
+        string $eventType,
+        Nguoi $actor,
+        ?int $fromStatus,
+        ?int $toStatus,
+        ?string $note = null,
+        ?array $metadata = null,
+    ): void {
+        HoSoWorkflowEvent::create([
+            'maHSXL' => $application->getKey(),
+            'event_type' => $eventType,
+            'actor_id' => $actor->getKey(),
+            'actor_name' => $actor->hoTen,
+            'actor_role' => $actor->vaiTro,
+            'from_status' => $fromStatus,
+            'to_status' => $toStatus,
+            'note' => $note,
+            'metadata' => $metadata,
+            'created_at' => now(),
+        ]);
     }
 
     private function markAccepted(HoSoXuLy $application, Nguoi $actor, Carbon $acceptedAt): void
