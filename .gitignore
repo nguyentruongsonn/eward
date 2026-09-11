@@ -26,3 +26,5 @@ Thumbs.db
 /.github
 /tests
 /frontend/test
+*.zip
+/dist-deploy-temp
