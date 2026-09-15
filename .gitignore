@@ -28,3 +28,5 @@ Thumbs.db
 /frontend/test
 *.zip
 /dist-deploy-temp
+/scripts/
+/DEPLOY_CPANEL_GUIDE.md
