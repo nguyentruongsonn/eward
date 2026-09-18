@@ -8,6 +8,7 @@ use App\Http\Requests\Api\V1\Admin\AcceptApplicationRequest;
 use App\Http\Requests\Api\V1\Admin\ApplicationListRequest;
 use App\Http\Requests\Api\V1\Admin\ApproveApplicationRequest;
 use App\Http\Requests\Api\V1\Admin\CompleteDirectReceptionRequest;
+use App\Http\Requests\Api\V1\Admin\ConfirmCounterPaymentRequest;
 use App\Http\Requests\Api\V1\Admin\ConfirmReceptionRequest;
 use App\Http\Requests\Api\V1\Admin\CreateApplicationCommentRequest;
 use App\Http\Requests\Api\V1\Admin\DeliverApplicationRequest;
@@ -32,6 +33,7 @@ use App\Services\HoSo\ApplicationCommentService;
 use App\Services\HoSo\ApplicationGeneralInfoService;
 use App\Services\HoSo\ApplicationProcessingService;
 use App\Services\Mail\ApplicationMailService;
+use App\Services\Payments\PaymentService;
 use App\Services\Workflow\HoSoWorkflowService;
 use App\Services\Workflow\StaffApplicationScope;
 use App\Support\ApiResponse;
@@ -47,6 +49,7 @@ class ApplicationController extends Controller
         private readonly AdminApplicationViewService $applicationViews,
         private readonly AdminApplicationListService $applicationLists,
         private readonly ApplicationMailService $mailService,
+        private readonly PaymentService $payments,
     ) {}
 
     public function show(\Illuminate\Http\Request $request, string $application): JsonResponse
@@ -66,6 +69,7 @@ class ApplicationController extends Controller
             'ngayTiepNhan_from' => $request->input('from'),
             'ngayTiepNhan_to' => $request->input('to'),
             'overdue' => $request->input('overdue'),
+            'payment_status' => $request->input('payment_status'),
         ];
         $sortColumn = [
             'received_at' => 'ngayTiepNhan',
@@ -82,7 +86,7 @@ class ApplicationController extends Controller
         );
         $data = $items->getCollection()->map(fn (HoSoXuLy $item): array => (new \App\Http\Resources\Api\V1\Admin\WorkflowQueueResource($item))->resolve($request))->values()->all();
 
-        return ApiResponse::success($data, 'Danh sách hồ sơ quản trị.', 200, $request, ['pagination' => ['page' => $items->currentPage(), 'per_page' => $items->perPage(), 'total' => $items->total(), 'last_page' => $items->lastPage()], 'filters' => $request->only(['status', 'procedure_id', 'citizen', 'from', 'to', 'sort', 'direction', 'overdue'])]);
+        return ApiResponse::success($data, 'Danh sách hồ sơ quản trị.', 200, $request, ['pagination' => ['page' => $items->currentPage(), 'per_page' => $items->perPage(), 'total' => $items->total(), 'last_page' => $items->lastPage()], 'filters' => $request->only(['status', 'payment_status', 'procedure_id', 'citizen', 'from', 'to', 'sort', 'direction', 'overdue'])]);
     }
 
     public function transition(TransitionApplicationRequest $request, string $application): JsonResponse
@@ -105,6 +109,23 @@ class ApplicationController extends Controller
         $item = $this->workflow->accept($item, $user);
 
         return ApiResponse::success(new ApplicationResource($item), 'Đã tiếp nhận hồ sơ.', 200, $request);
+    }
+
+    public function confirmCounterPayment(ConfirmCounterPaymentRequest $request, string $application): JsonResponse
+    {
+        /** @var Nguoi $user */
+        $user = $request->user('api');
+        $item = HoSoXuLy::query()->findOrFail($application);
+        $this->authorize('confirmCounterPayment', $item);
+        $intent = $this->payments->confirmCounterPayment(
+            $user,
+            $application,
+            (float) $request->input('amount'),
+            $request->string('receipt_number')->trim()->toString(),
+            $request->input('note'),
+        );
+
+        return ApiResponse::success(new \App\Http\Resources\Api\V1\PaymentIntentResource($intent), 'Đã xác nhận thu lệ phí trực tiếp tại quầy.', 201, $request);
     }
 
     public function completeDirectReception(CompleteDirectReceptionRequest $request, string $application): JsonResponse

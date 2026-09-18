@@ -62,7 +62,7 @@ class ApplicationController extends Controller
     {
         /** @var Nguoi $user */
         $user = $request->user('api');
-        $item = HoSoXuLy::query()->with(['trangThai', 'tthc', 'resultFiles'])->findOrFail($application);
+        $item = HoSoXuLy::query()->with(['trangThai', 'tthc', 'resultFiles', 'paymentHistories', 'paymentIntents'])->findOrFail($application);
         $this->authorize('view', $item);
 
         return ApiResponse::success(new ApplicationResource($item), 'Chi tiết hồ sơ.', 200, $request);

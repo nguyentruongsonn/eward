@@ -64,7 +64,7 @@ export function createProfileApplicationsTab({ navigate }) {
 
     const tbody = el('tbody', {}, list.map((app, idx) => {
       const isEven = idx % 2 === 0;
-      const statusBadge = renderStatusBadge(app.status_id || app.maTrangThai, app.status_name || app.tenTrangThai);
+      const statusBadge = renderStatusBadge(app.status?.id || app.status_id || app.maTrangThai, app.status?.name || app.status_name || app.tenTrangThai);
       const paymentBadge = renderPaymentBadge(app);
 
       return el('tr', {
@@ -93,7 +93,7 @@ export function createProfileApplicationsTab({ navigate }) {
             style: 'border: 1px solid #cbd5e1; font-size: 11.5px; font-weight: 700; padding: 0.3rem 0.75rem; color: #004482;',
             title: 'Xem chi tiết hồ sơ',
             onClick: () => openApplicationDetailModal(app),
-          }, 'Xem'),
+          }, Number(app.fee ?? app.lePhi ?? 0) > 0 && !app.payment_status?.is_paid ? 'Xem / thanh toán' : 'Xem'),
         ]),
       ]);
     }));

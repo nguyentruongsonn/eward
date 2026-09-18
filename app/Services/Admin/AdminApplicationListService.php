@@ -46,7 +46,7 @@ class AdminApplicationListService
         ?array $visibleStatuses = null,
     ): LengthAwarePaginator {
         $query = HoSoXuLy::query()
-            ->with(['congdan.nguoi', 'tthc', 'trangThai', 'paymentHistories'])
+            ->with(['congdan.nguoi', 'tthc', 'trangThai', 'paymentHistories', 'paymentIntents'])
             ->whereRaw("maHSXL LIKE 'HSXL_%'")
             ->whereNotNull('maHSXL')
             ->where('maHSXL', '!=', '0')
@@ -59,6 +59,7 @@ class AdminApplicationListService
         if ($visibleStatuses !== null) {
             $query->whereIn('maTrangThai', $visibleStatuses);
         }
+        $this->applyPaymentStatus($query, $filters);
 
         $sortColumn ??= match ($scope) {
             self::COMPLETED_SCOPE => 'ngayKetThucXuLy',
@@ -139,7 +140,24 @@ class AdminApplicationListService
                 $query->where('maTrangThai', $filters['maTrangThai']);
             } elseif (! $hasDateFilter) {
                 $query->where(static function ($inner): void {
-                    $inner->where('maTrangThai', HoSoStatus::PendingReception->value)
+                    $inner->where(static function ($pending): void {
+                        $pending->where('maTrangThai', HoSoStatus::PendingReception->value)
+                            ->where(static function ($payable): void {
+                                $payable->where('lePhi', '<=', 0)
+                                    ->orWhereExists(function ($paidHistory): void {
+                                        $paidHistory->selectRaw('1')
+                                            ->from('lichsuthanhtoan')
+                                            ->whereColumn('lichsuthanhtoan.maHSXL', 'hosoxuly.maHSXL')
+                                            ->where('lichsuthanhtoan.trangThai', 'Thành công');
+                                    })
+                                    ->orWhereExists(function ($paidIntent): void {
+                                        $paidIntent->selectRaw('1')
+                                            ->from('payment_intents')
+                                            ->whereColumn('payment_intents.maHSXL', 'hosoxuly.maHSXL')
+                                            ->where('payment_intents.status', 'paid');
+                                    });
+                            });
+                    })
                         ->orWhere(static function ($withdrawn): void {
                             $withdrawn->where('maTrangThai', HoSoStatus::WithdrawalRequested->value)->whereNull('ngayTiepNhan');
                         });
@@ -168,6 +186,50 @@ class AdminApplicationListService
             self::DELIVERED_SCOPE => $query->where('maTrangThai', HoSoStatus::Delivered->value),
             default => null,
         };
+    }
+
+    private function applyPaymentStatus($query, array $filters): void
+    {
+        $status = trim((string) ($filters['payment_status'] ?? ''));
+        if ($status === '' || $status === 'all') {
+            return;
+        }
+
+        $paid = static function ($paidQuery): void {
+            $paidQuery->where('lePhi', '<=', 0)
+                ->orWhereExists(function ($paidHistory): void {
+                    $paidHistory->selectRaw('1')
+                        ->from('lichsuthanhtoan')
+                        ->whereColumn('lichsuthanhtoan.maHSXL', 'hosoxuly.maHSXL')
+                        ->where('lichsuthanhtoan.trangThai', 'Thành công');
+                })
+                ->orWhereExists(function ($paidIntent): void {
+                    $paidIntent->selectRaw('1')
+                        ->from('payment_intents')
+                        ->whereColumn('payment_intents.maHSXL', 'hosoxuly.maHSXL')
+                        ->where('payment_intents.status', 'paid');
+                });
+        };
+
+        if ($status === 'paid') {
+            $query->where($paid);
+
+            return;
+        }
+
+        $query->where('lePhi', '>', 0)
+            ->whereNotExists(function ($paidHistory): void {
+                $paidHistory->selectRaw('1')
+                    ->from('lichsuthanhtoan')
+                    ->whereColumn('lichsuthanhtoan.maHSXL', 'hosoxuly.maHSXL')
+                    ->where('lichsuthanhtoan.trangThai', 'Thành công');
+            })
+            ->whereNotExists(function ($paidIntent): void {
+                $paidIntent->selectRaw('1')
+                    ->from('payment_intents')
+                    ->whereColumn('payment_intents.maHSXL', 'hosoxuly.maHSXL')
+                    ->where('payment_intents.status', 'paid');
+            });
     }
 
     private function filled(array $filters, string $key): bool

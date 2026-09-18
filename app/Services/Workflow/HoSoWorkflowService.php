@@ -17,10 +17,16 @@ class HoSoWorkflowService
     /** @return list<string> */
     public static function availableActions(Nguoi $actor, HoSoXuLy $application): array
     {
-        return self::availableActionsFor(
+        $actions = self::availableActionsFor(
             Role::normalize($actor->vaiTro),
             HoSoStatus::tryFrom((int) $application->maTrangThai),
         );
+
+        if (in_array('accept', $actions, true) && ! $application->hasSuccessfulPayment()) {
+            $actions = array_values(array_diff($actions, ['accept']));
+        }
+
+        return $actions;
     }
 
     /** @return list<string> */
@@ -79,6 +85,10 @@ class HoSoWorkflowService
                 ]);
             }
 
+            if (! $locked->hasSuccessfulPayment()) {
+                throw new ApiException('Hồ sơ chưa hoàn tất lệ phí.', 'PAYMENT_REQUIRED', 409);
+            }
+
             $this->markAccepted($locked, $actor, $acceptedAt);
             $locked->save();
 
@@ -98,6 +108,10 @@ class HoSoWorkflowService
                 throw new ApiException('Hồ sơ không ở trạng thái nhận trực tiếp.', 'WORKFLOW_DIRECT_RECEPTION_INVALID', 409, [
                     'from' => (int) $locked->maTrangThai,
                 ]);
+            }
+
+            if (! $locked->hasSuccessfulPayment()) {
+                throw new ApiException('Hồ sơ chưa hoàn tất lệ phí.', 'PAYMENT_REQUIRED', 409);
             }
 
             $requiredDocumentIds = DB::table('thanhphanhoso')

@@ -16,6 +16,8 @@ class PaymentIntentResource extends JsonResource
             'amount' => (float) $this->amount,
             'currency' => $this->currency,
             'status' => $this->status instanceof \BackedEnum ? $this->status->value : $this->status,
+            'transaction_id' => $this->provider_transaction_id,
+            'payment_method' => $this->provider === 'counter' ? 'direct' : 'online',
             'expires_at' => optional($this->expires_at)->toIso8601String(),
         ];
     }

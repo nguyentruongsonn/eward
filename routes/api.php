@@ -116,6 +116,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('applications', [AdminApplicationController::class, 'index']);
         Route::get('applications/{application}', [AdminApplicationController::class, 'show']);
         Route::post('applications/{application}/accept', [AdminApplicationController::class, 'accept']);
+        Route::post('applications/{application}/payments/counter', [AdminApplicationController::class, 'confirmCounterPayment']);
         Route::post('applications/{application}/complete-direct-reception', [AdminApplicationController::class, 'completeDirectReception']);
         Route::post('applications/{application}/reject', [AdminApplicationController::class, 'reject']);
         Route::post('applications/{application}/component-files', [AdminApplicationFileController::class, 'store'])->name('api.v1.admin.application.component-files.store');

@@ -17,6 +17,7 @@ class ApplicationListRequest extends FormRequest
         return [
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'status' => ['nullable', 'integer', 'exists:trangthaihoso,maTrangThai'],
+            'payment_status' => ['nullable', 'in:paid,unpaid,all'],
             'procedure_id' => ['nullable', 'integer', 'exists:tthc,maTTHC'],
             'citizen' => ['nullable', 'string', 'max:255'],
             'from' => ['nullable', 'date_format:Y-m-d'],

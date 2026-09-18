@@ -78,7 +78,7 @@ export function renderProfilePage({ navigate, searchParams }) {
     const menuItems = [
       { id: 'account', label: 'Thông tin tài khoản', icon: 'person' },
       { id: 'applications', label: 'Hồ sơ dịch vụ công', icon: 'folder_shared' },
-      { id: 'payments', label: 'Lịch sử thanh toán', icon: 'receipt_long' },
+      { id: 'payments', label: 'Thanh toán & lịch sử', icon: 'receipt_long' },
     ];
 
     const navList = el('nav', { style: 'display: flex; flex-direction: column; gap: 0.35rem;' });

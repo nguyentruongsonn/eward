@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PaymentStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -153,6 +154,30 @@ class HoSoXuLy extends Model
     public function paymentHistories()
     {
         return $this->hasMany(LichSuThanhToan::class, 'maHSXL', 'maHSXL');
+    }
+
+    public function paymentIntents()
+    {
+        return $this->hasMany(PaymentIntent::class, 'maHSXL', 'maHSXL');
+    }
+
+    public function hasSuccessfulPayment(): bool
+    {
+        if ((float) $this->lePhi <= 0) {
+            return true;
+        }
+
+        $historyPaid = $this->relationLoaded('paymentHistories')
+            ? $this->paymentHistories->contains(fn (LichSuThanhToan $payment): bool => $payment->trangThai === 'Thành công')
+            : $this->paymentHistories()->where('trangThai', 'Thành công')->exists();
+
+        if ($historyPaid) {
+            return true;
+        }
+
+        return $this->relationLoaded('paymentIntents')
+            ? $this->paymentIntents->contains(fn (PaymentIntent $intent): bool => $intent->status === PaymentStatus::Paid)
+            : $this->paymentIntents()->where('status', PaymentStatus::Paid->value)->exists();
     }
 
     public function workflowEvents()

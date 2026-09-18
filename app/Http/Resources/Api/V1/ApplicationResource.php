@@ -14,6 +14,15 @@ class ApplicationResource extends JsonResource
             $supplementRequest = json_decode($supplementRequest, true);
         }
 
+        $isPaid = $this->hasSuccessfulPayment();
+        $paymentHistory = $this->relationLoaded('paymentHistories')
+            ? $this->paymentHistories->first(fn ($payment): bool => $payment->trangThai === 'Thành công')
+            : $this->paymentHistories()->where('trangThai', 'Thành công')->latest('ngayGD')->first();
+        $paymentIntent = $this->relationLoaded('paymentIntents')
+            ? $this->paymentIntents->first(fn ($intent): bool => $intent->status?->value === 'paid')
+            : $this->paymentIntents()->where('status', 'paid')->latest('created_at')->first();
+        $paymentMethod = data_get($this->dulieu, 'payment_method');
+
         return [
             'id' => $this->maHSXL,
             'procedure_id' => $this->maTTHC,
@@ -30,8 +39,10 @@ class ApplicationResource extends JsonResource
             'payment_status' => [
                 'fee' => (float) $this->lePhi,
                 'is_free' => (float) $this->lePhi <= 0,
-                'is_paid' => (float) $this->lePhi <= 0 || ($this->relationLoaded('paymentHistories') && $this->paymentHistories->contains(fn ($p) => $p->trangThai === 'Thành công')),
-                'label' => ((float) $this->lePhi <= 0) ? 'Miễn phí' : (($this->relationLoaded('paymentHistories') && $this->paymentHistories->contains(fn ($p) => $p->trangThai === 'Thành công')) ? 'Đã thanh toán' : 'Chưa nộp phí'),
+                'is_paid' => $isPaid,
+                'method' => $paymentMethod,
+                'transaction_code' => $paymentHistory?->maGD ?: $paymentIntent?->provider_transaction_id,
+                'label' => ((float) $this->lePhi <= 0) ? 'Miễn phí' : ($isPaid ? 'Đã thanh toán' : ($paymentMethod === 'direct' ? 'Chờ thanh toán tại quầy' : 'Chưa thanh toán')),
             ],
             'delivery_method' => $this->hinhThuc,
             'data' => $this->dulieu,

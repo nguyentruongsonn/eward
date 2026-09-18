@@ -68,6 +68,11 @@ class HoSoXuLyPolicy
         return in_array(Role::normalize($user->vaiTro), [Role::OneStopOfficer, Role::Administrator], true);
     }
 
+    public function confirmCounterPayment(Nguoi $user, HoSoXuLy $application): bool
+    {
+        return in_array(Role::normalize($user->vaiTro), [Role::OneStopOfficer, Role::Administrator], true);
+    }
+
     public function completeDirectReception(Nguoi $user, HoSoXuLy $application): bool
     {
         return in_array(Role::normalize($user->vaiTro), [Role::OneStopOfficer, Role::Administrator], true);

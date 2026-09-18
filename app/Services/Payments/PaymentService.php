@@ -5,6 +5,7 @@ namespace App\Services\Payments;
 use App\Contracts\Payments\PaymentGateway;
 use App\Enums\PaymentStatus;
 use App\Exceptions\ApiException;
+use App\Models\HoSoWorkflowEvent;
 use App\Models\HoSoXuLy;
 use App\Models\LichSuThanhToan;
 use App\Models\Nguoi;
@@ -64,6 +65,75 @@ class PaymentService
         }
 
         return $this->gateway->createCheckout($intent);
+    }
+
+    public function confirmCounterPayment(Nguoi $actor, string $applicationId, float $amount, string $receiptNumber, ?string $note = null): PaymentIntent
+    {
+        return DB::transaction(function () use ($actor, $applicationId, $amount, $receiptNumber, $note): PaymentIntent {
+            $application = HoSoXuLy::query()->whereKey($applicationId)->lockForUpdate()->firstOrFail();
+            if ((float) $application->lePhi <= 0) {
+                throw new ApiException('Hồ sơ không phát sinh lệ phí.', 'PAYMENT_NOT_REQUIRED', 409);
+            }
+            if ((int) round($amount * 100) !== (int) round((float) $application->lePhi * 100)) {
+                throw new ApiException('Số tiền thu không khớp lệ phí hồ sơ.', 'PAYMENT_AMOUNT_MISMATCH', 409);
+            }
+            if ($application->hasSuccessfulPayment()) {
+                throw new ApiException('Hồ sơ đã được ghi nhận thanh toán.', 'PAYMENT_ALREADY_SETTLED', 409);
+            }
+            if (LichSuThanhToan::query()->where('maGD', $receiptNumber)->exists()) {
+                throw new ApiException('Số biên lai đã được sử dụng.', 'PAYMENT_RECEIPT_DUPLICATE', 409);
+            }
+
+            $intent = PaymentIntent::query()->where('maHSXL', $application->getKey())->where('status', PaymentStatus::Pending->value)->latest('created_at')->first();
+            if (! $intent) {
+                $intent = PaymentIntent::create([
+                    'IDCD' => $application->IDCD,
+                    'maHSXL' => $application->getKey(),
+                    'provider' => 'counter',
+                    'amount' => $application->lePhi,
+                    'status' => PaymentStatus::Paid,
+                ]);
+            } else {
+                $intent->provider = 'counter';
+                $intent->status = PaymentStatus::Paid;
+                $intent->provider_transaction_id = $receiptNumber;
+                $intent->metadata = ['method' => 'counter', 'note' => $note, 'confirmed_by' => $actor->getKey()];
+                $intent->save();
+            }
+
+            if ($intent->provider_transaction_id !== $receiptNumber) {
+                $intent->provider_transaction_id = $receiptNumber;
+                $intent->metadata = ['method' => 'counter', 'note' => $note, 'confirmed_by' => $actor->getKey()];
+                $intent->save();
+            }
+
+            LichSuThanhToan::query()->create([
+                'maGD' => $receiptNumber,
+                'soGD' => $receiptNumber,
+                'loaiGD' => 'Trực tiếp tại quầy',
+                'ngayGD' => now(),
+                'soTien' => $application->lePhi,
+                'trangThai' => 'Thành công',
+                'IDCD' => $application->IDCD,
+                'maHSXL' => $application->getKey(),
+                'moTa' => $note ?: 'Cán bộ xác nhận thu lệ phí trực tiếp tại quầy.',
+            ]);
+
+            HoSoWorkflowEvent::create([
+                'maHSXL' => $application->getKey(),
+                'event_type' => 'counter_payment_confirmed',
+                'actor_id' => $actor->getKey(),
+                'actor_name' => $actor->hoTen,
+                'actor_role' => $actor->vaiTro,
+                'from_status' => $application->maTrangThai,
+                'to_status' => $application->maTrangThai,
+                'note' => $note ?: 'Xác nhận thu lệ phí trực tiếp tại quầy.',
+                'metadata' => ['receipt_number' => $receiptNumber, 'amount' => $application->lePhi],
+                'created_at' => now(),
+            ]);
+
+            return $intent->fresh();
+        });
     }
 
     public function listForUser(Nguoi $user, int $perPage = 15, ?string $status = null): LengthAwarePaginator

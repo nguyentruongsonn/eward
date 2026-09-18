@@ -35,8 +35,13 @@ const rawGroups = [
         roles: ["administrator", "one-stop", "case-officer", "leader"],
       },
       {
-        path: "/can-bo/ho-so?status=1",
+        path: "/can-bo/ho-so?status=1&payment_status=paid",
         label: "Chờ tiếp nhận",
+        roles: ["administrator", "one-stop"],
+      },
+      {
+        path: "/can-bo/ho-so?status=1&payment_status=unpaid",
+        label: "Chờ thanh toán",
         roles: ["administrator", "one-stop"],
       },
       {
