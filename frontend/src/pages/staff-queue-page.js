@@ -14,6 +14,7 @@ export function renderStaffQueuePage({ navigate, searchParams }) {
   }
 
   let currentStatus = searchParams?.get('status') || '';
+  let currentPaymentStatus = searchParams?.get('payment_status') || '';
   let currentSearch = searchParams?.get('search') || '';
   let currentOverdue = searchParams?.get('overdue') || '';
   let currentField = '';
@@ -55,6 +56,15 @@ export function renderStaffQueuePage({ navigate, searchParams }) {
     style: 'height: 32px; font-size: 12.5px; width: 135px;',
   }, statusOptions.map(s => el('option', { value: s.value, selected: s.value === currentStatus }, s.label)));
 
+  const paymentStatusSelect = el('select', {
+    class: 'input',
+    style: 'height: 32px; font-size: 12.5px; width: 150px;',
+  }, [
+    el('option', { value: '', selected: currentPaymentStatus === '' }, 'Tất cả thanh toán'),
+    el('option', { value: 'paid', selected: currentPaymentStatus === 'paid' }, 'Đã thanh toán'),
+    el('option', { value: 'unpaid', selected: currentPaymentStatus === 'unpaid' }, 'Chưa thanh toán'),
+  ]);
+
   const overdueSelect = el('select', {
     class: 'input',
     style: 'height: 32px; font-size: 12.5px; width: 135px; font-weight: 600;',
@@ -81,6 +91,7 @@ export function renderStaffQueuePage({ navigate, searchParams }) {
   fieldSelect.addEventListener('change', () => { currentField = fieldSelect.value; currentProcedure = ''; procSelect.value = ''; loadProcedures(currentField); currentPage = 1; loadQueue(); });
   procSelect.addEventListener('change', () => { currentProcedure = procSelect.value; currentPage = 1; loadQueue(); });
   statusSelect.addEventListener('change', () => { currentStatus = statusSelect.value; currentPage = 1; loadQueue(); });
+  paymentStatusSelect.addEventListener('change', () => { currentPaymentStatus = paymentStatusSelect.value; currentPage = 1; loadQueue(); });
   overdueSelect.addEventListener('change', () => { currentOverdue = overdueSelect.value; currentPage = 1; loadQueue(); });
   keywordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { currentSearch = keywordInput.value.trim(); currentPage = 1; loadQueue(); } });
 
@@ -102,6 +113,8 @@ export function renderStaffQueuePage({ navigate, searchParams }) {
     onClick: () => {
       keywordInput.value = '';
       currentSearch = '';
+      currentPaymentStatus = '';
+      paymentStatusSelect.value = '';
       currentOverdue = '';
       overdueSelect.value = '';
       currentPage = 1;
@@ -116,7 +129,7 @@ export function renderStaffQueuePage({ navigate, searchParams }) {
 
   const filterToolbar = el('div', {
     style: 'display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 1rem; padding: 0.65rem 0.85rem; background: #ffffff; border: 1px solid #d0d7de; border-radius: 4px;',
-  }, [keywordInput, fieldSelect, procSelect, statusSelect, overdueSelect, searchBtn, refreshBtn, totalCountEl]);
+  }, [keywordInput, fieldSelect, procSelect, statusSelect, paymentStatusSelect, overdueSelect, searchBtn, refreshBtn, totalCountEl]);
 
   const tableArea = el('div', { class: 'card', style: 'padding: 0; background: #ffffff; border: 1px solid #d0d7de; overflow-x: auto;' });
   const paginationBar = el('div', { style: 'display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; font-size: 12.5px;' });
@@ -153,6 +166,7 @@ export function renderStaffQueuePage({ navigate, searchParams }) {
     try {
       const q = new URLSearchParams();
       if (currentStatus) q.set('status', currentStatus);
+      if (currentPaymentStatus) q.set('payment_status', currentPaymentStatus);
       if (currentOverdue) q.set('overdue', currentOverdue);
       if (currentSearch) q.set('citizen', currentSearch);
       if (currentField) q.set('field', currentField);

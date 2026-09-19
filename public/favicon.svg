@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">E-Ward</title>
+  <desc id="desc">Biểu tượng cổng dịch vụ công với tòa nhà hành chính và ngôi sao vàng.</desc>
+  <rect width="64" height="64" rx="15" fill="#0b2a4a"/>
+  <path d="M12 28 32 14l20 14v4H12z" fill="#fff"/>
+  <path d="M17 34h30v17H17z" fill="#fff"/>
+  <path d="M13 51h38v4H13z" fill="#f4c542"/>
+  <path d="M23 34h5v17h-5zm13 0h5v17h-5z" fill="#0b2a4a"/>
+  <path d="m32 20 1.6 3.2 3.5.5-2.5 2.4.6 3.5-3.2-1.7-3.2 1.7.6-3.5-2.5-2.4 3.5-.5z" fill="#f4c542"/>
+</svg>

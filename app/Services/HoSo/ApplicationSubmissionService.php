@@ -32,7 +32,7 @@ class ApplicationSubmissionService
     ): LengthAwarePaginator {
         $query = HoSoXuLy::query()
             ->whereIn('IDCD', $user->congDan()->select('IDCD'))
-            ->with(['trangThai', 'tthc', 'paymentHistories']);
+            ->with(['trangThai', 'tthc', 'paymentHistories', 'paymentIntents']);
 
         if (($serviceName = trim((string) ($filters['ten_dich_vu'] ?? ''))) !== '') {
             $query->whereHas('tthc', fn ($procedure) => $procedure->where('tenTTHC', 'like', "%{$serviceName}%"));
@@ -90,6 +90,7 @@ class ApplicationSubmissionService
                 $citizen = $this->citizen($user);
                 $fees = $this->calculateFees((int) $procedure->getKey(), $data['fee_items'] ?? []);
                 $formId = DB::table('formtructuyen')->where('maTTHC', $procedure->getKey())->value('maForm');
+                $paymentMethod = $data['payment_method'] ?? 'online';
 
                 return HoSoXuLy::create([
                     'maTTHC' => $procedure->getKey(),
@@ -102,6 +103,7 @@ class ApplicationSubmissionService
                     'dulieu' => [
                         'payload' => $data['data'],
                         'fee_items' => $fees['items'],
+                        'payment_method' => $paymentMethod,
                     ],
                     'maTrangThai' => HoSoStatus::PendingReception->value,
                     'lePhi' => $fees['total'],

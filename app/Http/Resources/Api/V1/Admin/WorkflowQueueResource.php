@@ -25,6 +25,14 @@ class WorkflowQueueResource extends JsonResource
             ],
             'received_at' => optional($this->ngayTiepNhan)->toIso8601String(),
             'due_at' => optional($this->ngayHenTra)->toIso8601String(),
+            'fee' => (float) $this->lePhi,
+            'payment_status' => [
+                'fee' => (float) $this->lePhi,
+                'is_free' => (float) $this->lePhi <= 0,
+                'is_paid' => $this->hasSuccessfulPayment(),
+                'method' => data_get($this->dulieu, 'payment_method'),
+                'label' => (float) $this->lePhi <= 0 ? 'Miễn phí' : ($this->hasSuccessfulPayment() ? 'Đã thanh toán' : 'Chưa thanh toán'),
+            ],
             'allowed_actions' => $this->allowedActions($actor),
         ];
     }

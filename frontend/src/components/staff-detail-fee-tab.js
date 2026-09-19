@@ -6,8 +6,9 @@ export function renderStaffFeeTab(app) {
   const totalFee = Number(app.fee || 0);
 
   const paymentMethod = rawData.payment_method || (app.delivery_method === 'Trực tuyến' ? 'Cổng thanh toán DVC Quốc gia' : 'Thu trực tiếp tại Quầy Một cửa');
-  const isPaid = app.status?.id >= 2 && totalFee > 0;
-  const statusLabel = totalFee === 0 ? 'Miễn thu lệ phí' : (isPaid ? 'Đã thu lệ phí / Có biên lai' : 'Chờ thu phí khi giao kết quả');
+  const isPaid = totalFee <= 0 || Boolean(app.payment_status?.is_paid);
+  const isDirect = app.payment_status?.method === 'direct' || rawData.payment_method === 'direct';
+  const statusLabel = totalFee === 0 ? 'Miễn thu lệ phí' : (isPaid ? 'Đã thu lệ phí / Có biên lai' : (isDirect ? 'Chờ thanh toán trực tiếp tại quầy' : 'Chờ thanh toán trực tuyến'));
   const statusBg = totalFee === 0 ? '#f1f5f9' : (isPaid ? '#dcfce7' : '#fef3c7');
   const statusColor = totalFee === 0 ? '#475569' : (isPaid ? '#15803d' : '#92400e');
 

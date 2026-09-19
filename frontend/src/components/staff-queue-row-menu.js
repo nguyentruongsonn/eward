@@ -3,6 +3,7 @@ import { api, getStoredUser } from '../api/client.js';
 import { normalizeStaffRole } from './staff-nav.js';
 import { openStaffActionModal } from './staff-action-modal.js';
 import { showToast } from './toast.js';
+import { openStaffCounterPaymentModal } from './staff-counter-payment-modal.js';
 
 export function createRowActionMenu(item, navigate, onRefresh, isNearBottom = false) {
   let isOpen = false;
@@ -60,6 +61,9 @@ export function createRowActionMenu(item, navigate, onRefresh, isNearBottom = fa
 
   const user = getStoredUser();
   const role = normalizeStaffRole(user?.vaiTro || user?.role);
+  const itemStatusId = Number(item.status?.id ?? item.trangThai ?? item.status_id ?? item.status ?? 1);
+  const itemFee = Number(item.fee ?? item.payment_status?.fee ?? 0);
+  const itemIsPaid = itemFee <= 0 || Boolean(item.payment_status?.is_paid);
 
   let items = [];
 
@@ -101,9 +105,16 @@ export function createRowActionMenu(item, navigate, onRefresh, isNearBottom = fa
       createMenuItem('Tải văn bản hồ sơ', '#334155', () => navigate(`/can-bo/ho-so/${item.id}?tab=dossier`)),
     ];
   } else if (role === 'one-stop') {
-    const sid = Number(item.trangThai ?? item.status_id ?? item.status ?? 1);
+    const sid = itemStatusId;
+    const fee = itemFee;
+    const isPaid = itemIsPaid;
     items = [];
-    if (sid === 1 || sid === 11) {
+    if ((sid === 1 || sid === 11) && fee > 0 && !isPaid) {
+      items.push(createMenuItem('Xác nhận thu trực tiếp', '#b45309', () => {
+        openStaffCounterPaymentModal({ application: item, onSubmitted: onRefresh });
+      }));
+    }
+    if ((sid === 1 || sid === 11) && isPaid) {
       items.push(createMenuItem('Tiếp nhận hồ sơ', '#004482', () => {
         openStaffActionModal({
           action: 'accept', actionLabel: 'Tiếp nhận hồ sơ', procedureComponents: [],
@@ -145,11 +156,9 @@ export function createRowActionMenu(item, navigate, onRefresh, isNearBottom = fa
       createMenuItem('Tải văn bản hồ sơ', '#334155', () => navigate(`/can-bo/ho-so/${item.id}?tab=dossier`)),
     ];
   } else {
+    const sid = itemStatusId;
     items = [
       createMenuItem('Xử lý hồ sơ', '#004482', () => navigate(`/can-bo/ho-so/${item.id}`)),
-      createMenuItem('Tiếp nhận hồ sơ', '#004482', () => {
-        openStaffActionModal({ action: 'accept', actionLabel: 'Tiếp nhận hồ sơ', procedureComponents: [], onSubmit: async (p) => { await api.post(`/admin/applications/${item.id}/accept`, p); onRefresh(); } });
-      }),
       createMenuItem('Từ chối hồ sơ', '#b91c1c', () => {
         openStaffActionModal({ action: 'reject', actionLabel: 'Từ chối tiếp nhận', procedureComponents: [], onSubmit: async (p) => { await api.post(`/admin/applications/${item.id}/reject`, p); onRefresh(); } });
       }),
@@ -162,6 +171,16 @@ export function createRowActionMenu(item, navigate, onRefresh, isNearBottom = fa
       createMenuItem('Xem lịch sử cập nhật', '#334155', () => navigate(`/can-bo/ho-so/${item.id}#audit`)),
       createMenuItem('Tải văn bản hồ sơ', '#334155', () => navigate(`/can-bo/ho-so/${item.id}?tab=dossier`)),
     ];
+    if ((sid === 1 || sid === 11) && itemFee > 0 && !itemIsPaid) {
+      items.unshift(createMenuItem('Xác nhận thu trực tiếp', '#b45309', () => {
+        openStaffCounterPaymentModal({ application: item, onSubmitted: onRefresh });
+      }));
+    }
+    if ((sid === 1 || sid === 11) && itemIsPaid) {
+      items.unshift(createMenuItem('Tiếp nhận hồ sơ', '#004482', () => {
+        openStaffActionModal({ action: 'accept', actionLabel: 'Tiếp nhận hồ sơ', procedureComponents: [], onSubmit: async (p) => { await api.post(`/admin/applications/${item.id}/accept`, p); onRefresh(); } });
+      }));
+    }
   }
 
   menu.replaceChildren(...items);

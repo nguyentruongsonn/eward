@@ -27,6 +27,8 @@ class AdminApplicationViewService
                 'approver',
                 'files',
                 'resultFiles',
+                'paymentHistories',
+                'paymentIntents',
             ])
             ->whereKey($application)
             ->firstOrFail();

@@ -1,4 +1,5 @@
 import { el } from './dom.js';
+import { api } from '../api/client.js';
 
 export function renderProfileModalFeeTab(app) {
   const rawData = app.data || app.dulieu || {};
@@ -11,7 +12,10 @@ export function renderProfileModalFeeTab(app) {
   const statusLabel = isFree ? 'Miễn thu lệ phí' : (isPaid ? 'Đã thu lệ phí / Có biên lai' : 'Chưa nộp phí');
   const statusBg = isFree ? '#f1f5f9' : (isPaid ? '#dcfce7' : '#fef3c7');
   const statusColor = isFree ? '#475569' : (isPaid ? '#15803d' : '#92400e');
-  const paymentMethod = rawData.payment_method || (app.delivery_method === 'Trực tuyến' ? 'Trực tuyến qua VietQR' : 'Thu trực tiếp tại Quầy Một cửa');
+  const paymentMethodCode = rawData.payment_method || app.payment_status?.method || 'online';
+  const paymentMethod = paymentMethodCode === 'direct'
+    ? 'Thanh toán trực tiếp tại Bộ phận Một cửa'
+    : 'Thanh toán trực tuyến qua VietQR';
 
   const container = el('div', { style: 'display: flex; flex-direction: column; gap: 1.25rem;' });
 
@@ -73,20 +77,64 @@ export function renderProfileModalFeeTab(app) {
     ]),
   ]);
 
-  const qrSection = (!isPaid && !isFree) ? el('div', {
+  const qrBody = el('div', {
+    style: 'display: flex; flex-direction: column; align-items: center; gap: 0.75rem; min-height: 90px; justify-content: center;',
+  }, 'Đang tạo mã QR thanh toán...');
+  const refreshPaymentBtn = el('button', {
+    type: 'button',
+    class: 'btn btn-secondary btn-sm',
+    style: 'border: 1px solid #93c5fd; color: #004482; font-weight: 700;',
+  }, 'Kiểm tra lại thanh toán');
+
+  const qrSection = (!isPaid && !isFree && paymentMethodCode !== 'direct') ? el('div', {
     class: 'card',
     style: 'border: 1px dashed #004482; border-radius: 6px; padding: 1.5rem; background: #f0f7ff; text-align: center;',
   }, [
     el('h4', { style: 'font-size: 14px; font-weight: 800; color: #004482; margin: 0 0 1rem; text-transform: uppercase;' }, 'THANH TOÁN TRỰC TUYẾN QUA VIETQR'),
-    el('div', { style: 'display: flex; justify-content: center;' }, [
-      el('img', {
-        src: `https://img.vietqr.io/image/MB-914040399999-compact2.png?amount=${Math.round(totalFee)}&addInfo=${encodeURIComponent(appId)}`,
-        alt: 'VietQR',
-        style: 'max-width: 220px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; padding: 0.35rem;',
-      }),
-    ]),
+    qrBody,
+    refreshPaymentBtn,
   ]) : null;
 
-  container.append(kpiGrid, feeDetailsCard, ...(qrSection ? [qrSection] : []));
+  const directPaymentSection = (!isPaid && !isFree && paymentMethodCode === 'direct') ? el('div', {
+    class: 'card',
+    style: 'border: 1px dashed #b45309; border-radius: 6px; padding: 1.25rem 1.5rem; background: #fffbeb;',
+  }, [
+    el('strong', { style: 'display: block; color: #92400e; font-size: 13.5px;' }, 'Chờ thanh toán trực tiếp tại quầy'),
+    el('p', { style: 'margin: 0.6rem 0 0; font-size: 12.5px; color: #78350f; line-height: 1.55;' }, 'Công dân mang mã hồ sơ này đến Bộ phận Một cửa. Cán bộ sẽ xác nhận biên lai trên hệ thống; hồ sơ chỉ được đưa vào hàng đợi tiếp nhận sau khi xác nhận thu tiền.'),
+  ]) : null;
+
+  async function loadCheckout() {
+    if (!qrSection) return;
+    qrBody.replaceChildren(el('span', { style: 'font-size: 12.5px; color: #64748b;' }, 'Đang tạo mã QR thanh toán...'));
+    refreshPaymentBtn.disabled = true;
+    try {
+      const intentResponse = await api.post('/payments/intents', { application_id: appId, provider: 'casso' }, {
+        headers: { 'Idempotency-Key': `application-${appId}-payment` },
+      });
+      const intent = intentResponse?.data;
+      const checkoutResponse = await api.get(`/payments/intents/${intent.id}/checkout`);
+      const checkout = checkoutResponse?.data || {};
+      if (!checkout.qr_url) throw new Error('Cổng thanh toán chưa trả về mã QR.');
+      qrBody.replaceChildren(
+        el('img', {
+          src: checkout.qr_url,
+          alt: `Mã QR thanh toán hồ sơ ${appId}`,
+          style: 'max-width: 240px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; padding: 0.35rem;',
+        }),
+        el('span', { style: 'font-size: 12px; color: #475569;' }, `Số tiền: ${Number(checkout.amount || totalFee).toLocaleString('vi-VN')} đ · Mã hồ sơ: ${appId}`),
+      );
+    } catch (error) {
+      qrBody.replaceChildren(
+        el('span', { style: 'font-size: 12.5px; color: #b91c1c; font-weight: 700;' }, error.message || 'Không thể tạo mã QR.'),
+      );
+    } finally {
+      refreshPaymentBtn.disabled = false;
+    }
+  }
+
+  refreshPaymentBtn.addEventListener('click', loadCheckout);
+
+  container.append(kpiGrid, feeDetailsCard, ...(qrSection ? [qrSection] : []), ...(directPaymentSection ? [directPaymentSection] : []));
+  loadCheckout();
   return container;
 }
