@@ -80,22 +80,6 @@ export function openAuthModal(defaultTab = 'login', onAuthSuccess) {
   const loginPass = el('input', { type: 'password', class: 'input', placeholder: 'Mật khẩu...', required: true });
   const loginBtn = el('button', { type: 'submit', class: 'btn btn-primary', style: 'width: 100%; height: 42px; margin-top: 0.5rem;' }, 'Đăng nhập');
 
-  const demoAccounts = [
-    { label: 'Công dân', email: 'nts594187a@gmail.com' },
-    { label: 'Một cửa', email: 'canbo1@gmail.com' },
-    { label: 'Thụ lý', email: 'canbo2@gmail.com' },
-    { label: 'Lãnh đạo', email: 'lanhdao@gmail.com' },
-    { label: 'Quản trị', email: 'admin@gmail.com' },
-  ].map(acc => el('button', {
-    type: 'button',
-    class: 'btn btn-ghost btn-sm',
-    style: 'font-size: 11px; padding: 0.2rem 0.5rem; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 3px; color: #004482;',
-    onClick: () => {
-      loginEmail.value = acc.email;
-      loginPass.value = 'password123';
-    },
-  }, acc.label));
-
   const loginForm = el('form', {
     style: 'display: flex; flex-direction: column; gap: 1rem;',
     onSubmit: async (e) => {
@@ -130,10 +114,6 @@ export function openAuthModal(defaultTab = 'login', onAuthSuccess) {
     el('div', {}, [el('label', { style: 'display: block; font-size: 12px; font-weight: 700; margin-bottom: 0.25rem;' }, 'TÀI KHOẢN (EMAIL / CCCD): *'), loginEmail]),
     el('div', {}, [el('label', { style: 'display: block; font-size: 12px; font-weight: 700; margin-bottom: 0.25rem;' }, 'MẬT KHẨU: *'), loginPass]),
     loginBtn,
-    el('div', { style: 'padding-top: 0.75rem; border-top: 1px solid var(--outline-variant); font-size: 11px; color: var(--on-surface-variant);' }, [
-      el('div', { style: 'margin-bottom: 0.35rem; font-weight: 600;' }, 'Tài khoản thử nghiệm nhanh:'),
-      el('div', { style: 'display: flex; gap: 0.35rem; flex-wrap: wrap;' }, demoAccounts),
-    ]),
   ]);
 
   const regName = el('input', { type: 'text', class: 'input', placeholder: 'Họ và tên...', required: true });

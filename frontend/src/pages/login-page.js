@@ -49,7 +49,6 @@ export function renderLoginPage({ navigate }) {
     onBack: () => {
       otp.hide();
       credentialsSection.style.display = 'block';
-      demoSection.style.display = 'block';
     },
     onSuccess: handleLoginSuccess,
     onError: (msg) => {
@@ -57,22 +56,6 @@ export function renderLoginPage({ navigate }) {
       errorAlert.style.display = 'block';
     },
   });
-
-  const demoAccounts = [
-    { label: 'Công dân', email: 'nts594187a@gmail.com' },
-    { label: 'Một cửa', email: 'canbo1@gmail.com' },
-    { label: 'Thụ lý', email: 'canbo2@gmail.com' },
-    { label: 'Lãnh đạo', email: 'lanhdao@gmail.com' },
-    { label: 'Quản trị', email: 'admin@gmail.com' },
-  ].map(acc => el('button', {
-    type: 'button',
-    class: 'btn btn-ghost btn-sm',
-    style: 'font-size: 11px; padding: 0.2rem 0.5rem; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 3px; color: #004482;',
-    onClick: () => {
-      emailInput.value = acc.email;
-      passwordInput.value = 'password123';
-    },
-  }, acc.label));
 
   const credentialsSection = el('div', {}, [
     el('div', { style: 'margin-bottom: 1.25rem;' }, [
@@ -87,13 +70,6 @@ export function renderLoginPage({ navigate }) {
       passwordInput,
     ]),
     submitBtn,
-  ]);
-
-  const demoSection = el('div', {
-    style: 'margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--outline-variant); font-size: 12px; color: var(--on-surface-variant);',
-  }, [
-    el('div', { style: 'margin-bottom: 0.5rem; font-weight: 600;' }, 'Tài khoản thử nghiệm nhanh:'),
-    el('div', { style: 'display: flex; gap: 0.35rem; flex-wrap: wrap;' }, demoAccounts),
   ]);
 
   const form = el('form', {
@@ -114,7 +90,6 @@ export function renderLoginPage({ navigate }) {
         if (res.data?.verification_required || res.verification_required) {
           const email = res.data?.email || res.email || emailInput.value.trim();
           credentialsSection.style.display = 'none';
-          demoSection.style.display = 'none';
           otp.show('login', email);
           return;
         }
@@ -136,7 +111,6 @@ export function renderLoginPage({ navigate }) {
     errorAlert,
     credentialsSection,
     otp.form,
-    demoSection,
   ]);
 
   container.append(form);
