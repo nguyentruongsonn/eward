@@ -86,7 +86,7 @@ function initApp() {
       const isStaffRoute = pathname.startsWith('/can-bo');
       header.style.display = isStaffRoute ? 'none' : '';
       footer.style.display = isStaffRoute ? 'none' : '';
-      chatAi.style.display = isStaffRoute ? 'none' : '';
+      chatAi.style.display = 'none';
     },
   });
 

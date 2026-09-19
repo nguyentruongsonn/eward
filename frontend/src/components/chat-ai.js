@@ -1,7 +1,13 @@
 import { el } from './dom.js';
 import { api } from '../api/client.js';
 
+export const CHAT_AI_ENABLED = false;
+
 export function renderChatAiWidget() {
+  if (!CHAT_AI_ENABLED) {
+    return el('div', { id: 'eward-chat-ai-root', style: 'display: none;' });
+  }
+
   let isOpen = false;
   let isLoading = false;
   const STORAGE_KEY = 'eward_ai_chat_history';
