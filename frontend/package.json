@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:publish": "vite build && node -e \"require('fs').cpSync('dist', '../public', {recursive: true})\"",
     "preview": "vite preview",
     "test": "node --test test/*.test.mjs"
   },
