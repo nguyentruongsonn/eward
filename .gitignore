@@ -30,3 +30,4 @@ Thumbs.db
 /dist-deploy-temp
 /scripts/
 /DEPLOY_CPANEL_GUIDE.md
+/.env.production.example
