@@ -13,6 +13,7 @@ class PaymentIntentResource extends JsonResource
             'id' => $this->id,
             'application_id' => $this->maHSXL,
             'provider' => $this->provider,
+            'order_code' => $this->provider_order_code,
             'amount' => (float) $this->amount,
             'currency' => $this->currency,
             'status' => $this->status instanceof \BackedEnum ? $this->status->value : $this->status,

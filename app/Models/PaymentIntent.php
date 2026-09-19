@@ -18,12 +18,13 @@ class PaymentIntent extends Model
     public $incrementing = false;
 
     protected $fillable = [
-        'id', 'IDCD', 'maHSXL', 'provider', 'amount', 'currency', 'status',
+        'id', 'IDCD', 'maHSXL', 'provider', 'provider_order_code', 'amount', 'currency', 'status',
         'provider_transaction_id', 'metadata', 'expires_at',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'provider_order_code' => 'integer',
         'metadata' => 'array',
         'status' => PaymentStatus::class,
         'expires_at' => 'datetime',

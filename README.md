@@ -84,4 +84,4 @@ API middleware ghi structured event `api.request` gồm route, status class, act
 
 ## Bảo mật
 
-Không đưa JWT secret, Casso key, password hoặc dữ liệu cá nhân vào repository, log hay frontend. Chạy `composer audit --locked`, `npm audit --omit=dev --audit-level=high` và `php artisan data:integrity-report` trước khi phát hành.
+Không đưa JWT secret, PayOS key, password hoặc dữ liệu cá nhân vào repository, log hay frontend. Chạy `composer audit --locked`, `npm audit --omit=dev --audit-level=high` và `php artisan data:integrity-report` trước khi phát hành.

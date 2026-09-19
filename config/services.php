@@ -35,15 +35,11 @@ return [
         ],
     ],
 
-    'vietqr' => [
-        'bank_id' => env('VIETQR_BANK_ID', 'MB'),
-        'account_no' => env('VIETQR_ACCOUNT_NO', '914040399999'),
-    ],
-
-    'casso' => [
-        'api_key' => env('CASSO_API_KEY'),
-        'webhook_secret' => env('CASSO_WEBHOOK_SECRET'),
-        'api_url' => env('CASSO_API_URL', 'https://oauth.casso.vn/v2/transactions'),
+    'payos' => [
+        'client_id' => env('PAYOS_CLIENT_ID'),
+        'api_key' => env('PAYOS_API_KEY'),
+        'checksum_key' => env('PAYOS_CHECKSUM_KEY'),
+        'api_url' => env('PAYOS_API_URL', 'https://api-merchant.payos.vn'),
     ],
 
     'groq' => [
