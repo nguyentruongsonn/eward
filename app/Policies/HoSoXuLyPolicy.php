@@ -158,7 +158,13 @@ class HoSoXuLyPolicy
 
     private function owns(Nguoi $user, HoSoXuLy $application): bool
     {
-        return $user->congDan()->where('IDCD', $application->IDCD)->exists();
+        static $userCitizenMap = [];
+        $userId = $user->getKey();
+        if (! array_key_exists($userId, $userCitizenMap)) {
+            $userCitizenMap[$userId] = $user->congDan()->pluck('IDCD')->all();
+        }
+
+        return in_array($application->IDCD, $userCitizenMap[$userId], true);
     }
 
     private function isStaff(Nguoi $user): bool

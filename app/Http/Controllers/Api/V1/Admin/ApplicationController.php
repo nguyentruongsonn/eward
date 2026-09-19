@@ -22,6 +22,7 @@ use App\Http\Requests\Api\V1\HoSo\TransitionApplicationRequest;
 use App\Http\Resources\Api\V1\AdminApplicationResource;
 use App\Http\Resources\Api\V1\ApplicationResource;
 use App\Http\Resources\Api\V1\MailHistoryResource;
+use App\Http\Resources\Api\V1\WorkflowEventResource;
 use App\Models\HoSoXuLy;
 use App\Models\HoSoXuLyMailHistory;
 use App\Models\Nguoi;
@@ -295,5 +296,19 @@ class ApplicationController extends Controller
         return ApiResponse::success(new MailHistoryResource($history), 'Đã gửi email cho công dân.', 201, $request, [
             'last_mail_sent_at' => optional($item->refresh()->last_mail_sent_at)->toIso8601String(),
         ]);
+    }
+
+    public function events(string $application): JsonResponse
+    {
+        $item = HoSoXuLy::query()->findOrFail($application);
+        $this->authorize('viewStaff', $item);
+
+        $events = $item->workflowEvents()->get();
+
+        return ApiResponse::success(
+            WorkflowEventResource::collection($events),
+            'Lịch sử tiến trình xử lý hồ sơ.',
+            200,
+        );
     }
 }

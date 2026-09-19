@@ -1,21 +1,24 @@
 const BASE_URL = '/api/v1';
+const ACCESS_TOKEN_KEY = 'eward_access_token';
+const REFRESH_TOKEN_KEY = 'eward_refresh_token';
+const USER_KEY = 'eward_user';
 
 export function getAuthToken() {
-  return localStorage.getItem('eward_access_token') || localStorage.getItem('eward_token') || sessionStorage.getItem('eward_token') || '';
+  return localStorage.getItem(ACCESS_TOKEN_KEY) || localStorage.getItem('eward_token') || '';
 }
 
 export function getRefreshToken() {
-  return localStorage.getItem('eward_refresh_token') || sessionStorage.getItem('eward_refresh_token') || '';
+  return localStorage.getItem(REFRESH_TOKEN_KEY) || '';
 }
 
 export function setAuthTokens(accessToken, refreshToken = null) {
   if (!accessToken) return;
-  localStorage.setItem('eward_access_token', accessToken);
-  localStorage.setItem('eward_token', accessToken);
-  sessionStorage.setItem('eward_token', accessToken);
+  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  localStorage.removeItem('eward_token');
+  sessionStorage.removeItem('eward_token');
   if (refreshToken) {
-    localStorage.setItem('eward_refresh_token', refreshToken);
-    sessionStorage.setItem('eward_refresh_token', refreshToken);
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    sessionStorage.removeItem('eward_refresh_token');
   }
 }
 
@@ -24,18 +27,18 @@ export function setAuthToken(token) {
 }
 
 export function clearAuthToken() {
-  localStorage.removeItem('eward_access_token');
-  localStorage.removeItem('eward_refresh_token');
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
   localStorage.removeItem('eward_token');
   sessionStorage.removeItem('eward_token');
   sessionStorage.removeItem('eward_refresh_token');
-  localStorage.removeItem('eward_user');
-  sessionStorage.removeItem('eward_user');
+  localStorage.removeItem(USER_KEY);
+  sessionStorage.removeItem(USER_KEY);
 }
 
 export function getStoredUser() {
   try {
-    const raw = localStorage.getItem('eward_user') || sessionStorage.getItem('eward_user');
+    const raw = localStorage.getItem(USER_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch (_) {
     return null;
@@ -45,8 +48,8 @@ export function getStoredUser() {
 export function setStoredUser(user) {
   if (!user) return;
   const str = typeof user === 'string' ? user : JSON.stringify(user);
-  localStorage.setItem('eward_user', str);
-  sessionStorage.setItem('eward_user', str);
+  localStorage.setItem(USER_KEY, str);
+  sessionStorage.removeItem(USER_KEY);
 }
 
 let isRefreshing = false;

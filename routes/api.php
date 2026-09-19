@@ -133,6 +133,8 @@ Route::prefix('v1')->group(function (): void {
             ->name('api.v1.admin.application.mail-history');
         Route::post('applications/{application}/mail', [AdminApplicationController::class, 'sendMail'])
             ->name('api.v1.admin.application.mail.send');
+        Route::get('applications/{application}/events', [AdminApplicationController::class, 'events'])
+            ->name('api.v1.admin.application.events');
         Route::post('applications/{application}/supplement-requests', [AdminSupplementRequestController::class, 'store']);
         Route::get('applications/{application}/result-files', [AdminResultFileController::class, 'index'])->name('api.v1.admin.application.result-files.index');
         Route::post('applications/{application}/result-files', [AdminResultFileController::class, 'store'])->name('api.v1.admin.application.result-files.store');

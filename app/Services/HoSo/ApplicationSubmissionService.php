@@ -2,6 +2,7 @@
 
 namespace App\Services\HoSo;
 
+use App\Enums\HoSoStatus;
 use App\Exceptions\ApiException;
 use App\Models\CongDan;
 use App\Models\HoSoXuLy;
@@ -102,7 +103,7 @@ class ApplicationSubmissionService
                         'payload' => $data['data'],
                         'fee_items' => $fees['items'],
                     ],
-                    'maTrangThai' => 1,
+                    'maTrangThai' => HoSoStatus::PendingReception->value,
                     'lePhi' => $fees['total'],
                     'hinhThuc' => $data['delivery_method'] === 'direct' ? 'Nhận trực tiếp' : 'Nhận trực tuyến',
                     'donViXuLy' => $procedure->coQuanThucHien ?: 'Bộ phận Một cửa',

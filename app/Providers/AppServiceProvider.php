@@ -36,14 +36,14 @@ class AppServiceProvider extends ServiceProvider
         }
 
         // Auth rate limits — intentionally tight to resist brute force
-        RateLimiter::for('auth-login', static fn (Request $request): Limit => Limit::perMinute(5)->by('auth-login|'.$request->ip()));
+        RateLimiter::for('auth-login', static fn (Request $request): Limit => Limit::perMinute(10)->by('auth-login|'.$request->ip()));
         RateLimiter::for('auth-register', static fn (Request $request): Limit => Limit::perMinute(10)->by('auth-register|'.$request->ip()));
         RateLimiter::for('auth-verify-otp', static fn (Request $request): Limit => Limit::perMinute(10)->by('auth-verify-otp|'.$request->ip()));
 
-        RateLimiter::for('password-otp', static fn (Request $request): Limit => Limit::perMinutes(5, 5)->by(
+        RateLimiter::for('password-otp', static fn (Request $request): Limit => Limit::perMinutes(5, 10)->by(
             'password-otp|'.($request->user('api')?->getKey() ?? $request->ip())
         ));
-        RateLimiter::for('citizen-password-verify', static fn (Request $request): Limit => Limit::perMinute(5)->by(
+        RateLimiter::for('citizen-password-verify', static fn (Request $request): Limit => Limit::perMinute(10)->by(
             'citizen-password-verify|'.($request->user('api')?->getKey() ?? $request->ip())
         ));
 

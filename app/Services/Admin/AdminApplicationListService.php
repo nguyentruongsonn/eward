@@ -2,6 +2,7 @@
 
 namespace App\Services\Admin;
 
+use App\Enums\HoSoStatus;
 use App\Models\HoSoXuLy;
 use App\Models\TrangThaiHoSo;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -115,7 +116,11 @@ class AdminApplicationListService
         if ($isOverdue) {
             $query->whereNotNull('ngayHenTra')
                 ->where('ngayHenTra', '<', now())
-                ->whereNotIn('maTrangThai', [9, 10, 3]);
+                ->whereNotIn('maTrangThai', [
+                    HoSoStatus::Completed->value,
+                    HoSoStatus::Delivered->value,
+                    HoSoStatus::Rejected->value,
+                ]);
         }
     }
 
@@ -134,9 +139,9 @@ class AdminApplicationListService
                 $query->where('maTrangThai', $filters['maTrangThai']);
             } elseif (! $hasDateFilter) {
                 $query->where(static function ($inner): void {
-                    $inner->where('maTrangThai', 1)
+                    $inner->where('maTrangThai', HoSoStatus::PendingReception->value)
                         ->orWhere(static function ($withdrawn): void {
-                            $withdrawn->where('maTrangThai', 7)->whereNull('ngayTiepNhan');
+                            $withdrawn->where('maTrangThai', HoSoStatus::WithdrawalRequested->value)->whereNull('ngayTiepNhan');
                         });
                 });
             }
@@ -146,21 +151,21 @@ class AdminApplicationListService
 
         match ($scope) {
             self::RECEIVED_SCOPE => $query->where(static function ($inner): void {
-                $inner->where('maTrangThai', 2)
+                $inner->where('maTrangThai', HoSoStatus::Accepted->value)
                     ->orWhere(static function ($withdrawn): void {
-                        $withdrawn->where('maTrangThai', 7)->whereNotNull('ngayTiepNhan');
+                        $withdrawn->where('maTrangThai', HoSoStatus::WithdrawalRequested->value)->whereNotNull('ngayTiepNhan');
                     });
             }),
             self::PROCESSING_SCOPE => $query->where(static function ($inner): void {
-                $inner->where('maTrangThai', 4)
+                $inner->where('maTrangThai', HoSoStatus::Processing->value)
                     ->orWhere(static function ($withdrawn): void {
-                        $withdrawn->where('maTrangThai', 7)->where('maTrangThai_backup', 4);
+                        $withdrawn->where('maTrangThai', HoSoStatus::WithdrawalRequested->value)->where('maTrangThai_backup', HoSoStatus::Processing->value);
                     });
             }),
-            self::DIRECT_SCOPE => $query->where('maTrangThai', 11),
-            self::SUPPLEMENT_SCOPE => $query->where('maTrangThai', 5),
-            self::COMPLETED_SCOPE => $query->where('maTrangThai', 9),
-            self::DELIVERED_SCOPE => $query->where('maTrangThai', 10),
+            self::DIRECT_SCOPE => $query->where('maTrangThai', HoSoStatus::DirectReception->value),
+            self::SUPPLEMENT_SCOPE => $query->where('maTrangThai', HoSoStatus::SupplementRequested->value),
+            self::COMPLETED_SCOPE => $query->where('maTrangThai', HoSoStatus::Completed->value),
+            self::DELIVERED_SCOPE => $query->where('maTrangThai', HoSoStatus::Delivered->value),
             default => null,
         };
     }

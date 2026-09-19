@@ -63,6 +63,6 @@ enum Role: string
 
     public function storageValue(): string
     {
-        return $this === self::CaseOfficer ? 'Cán bộ thụ lý ' : $this->value;
+        return $this->value;
     }
 }
