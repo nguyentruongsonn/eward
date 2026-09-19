@@ -78,7 +78,7 @@ Response thành công có dạng `{ success, message, data, errors: null, meta }
 
 ## Vận hành
 
-Xem [runbook API-only cho demo khóa luận](docs/refactor/api-only-runbook.md), [quy ước môi trường](docs/deploy/env.md) và [báo cáo review](docs/reviews/2026-09-07-comprehensive-review.md). Laravel và Vite phải được chạy như hai tiến trình độc lập; các đường dẫn UI cũ luôn trả JSON 404.
+Laravel và Vite phải được chạy như hai tiến trình độc lập; các đường dẫn UI cũ luôn trả JSON 404.
 
 API middleware ghi structured event `api.request` gồm route, status class, actor, error code và latency để kết nối log pipeline với dashboard/alert p50/p95/p99.
 
