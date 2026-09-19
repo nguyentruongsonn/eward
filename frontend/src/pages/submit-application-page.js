@@ -1,5 +1,6 @@
 import { el } from '../components/dom.js';
 import { api, getAuthToken, getStoredUser, setStoredUser } from '../api/client.js';
+import { createApplicationCheckout, pollPaymentIntent } from '../api/payment-checkout.js';
 import { openAuthModal } from '../components/auth-modal.js';
 import { createDynamicForm } from '../components/dynamic-form.js';
 import { createSubmissionDossier } from '../components/submission-dossier.js';
@@ -190,12 +191,13 @@ export function renderSubmitApplicationPage({ params, searchParams, navigate }) 
             payment_method: step3Data.payment_method,
           },
           delivery_method: step3Data.delivery_method,
+          payment_method: step3Data.payment_method,
           fee_items: step3Data.fee_items || [],
         };
 
         try {
           const res = await api.post('/citizen/applications', payload);
-          renderSuccessReceipt(res.data || res, applicantPhone);
+          renderSuccessReceipt(res.data || res, applicantPhone, step3Data.payment_method);
         } catch (err) {
           errorAlert.textContent = err.message || 'Không thể gửi hồ sơ. Vui lòng kiểm tra lại thông tin.';
           errorAlert.style.display = 'block';
@@ -214,9 +216,13 @@ export function renderSubmitApplicationPage({ params, searchParams, navigate }) 
     mainArea.replaceChildren(headerCard, stepperBar, errorAlert, contentBox, navBar);
   }
 
-  function renderSuccessReceipt(app, phone) {
+  function renderSuccessReceipt(app, phone, selectedPaymentMethod = null) {
     const code = app.id || app.maHSXL;
-    mainArea.replaceChildren(el('div', { class: 'card', style: 'padding: 2.5rem; max-width: 680px; margin: 0 auto; background: #ffffff; border: 1px solid #d0d7de; border-radius: 4px;' }, [
+    const rawData = app.data || app.dulieu || {};
+    const totalFee = Number(app.fee ?? app.lePhi ?? 0);
+    const paymentMethod = selectedPaymentMethod || app.payment_status?.method || rawData.payment_method || 'online';
+    const isPaid = Boolean(app.payment_status?.is_paid);
+    const receiptCard = el('div', { class: 'card', style: 'padding: 2.5rem; max-width: 680px; margin: 0 auto; background: #ffffff; border: 1px solid #d0d7de; border-radius: 4px;' }, [
       el('div', { style: 'text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 1.5rem; margin-bottom: 1.5rem;' }, [
         el('div', { style: 'font-size: 32px; color: #16a34a; margin-bottom: 0.5rem;' }, '✓'),
         el('h2', { style: 'font-family: var(--font-heading); font-size: 20px; font-weight: 800; color: #004482; margin: 0 0 0.5rem;' }, 'NỘP HỒ SƠ TRỰC TUYẾN THÀNH CÔNG'),
@@ -231,14 +237,82 @@ export function renderSubmitApplicationPage({ params, searchParams, navigate }) 
           el('div', { style: 'display: flex; justify-content: space-between;' }, [el('span', { style: 'color: #64748b;' }, 'Thủ tục:'), el('strong', { style: 'text-align: right; max-width: 65%;' }, app.procedure_name)]),
           el('div', { style: 'display: flex; justify-content: space-between;' }, [el('span', { style: 'color: #64748b;' }, 'Người nộp:'), el('strong', {}, app.applicant_name)]),
           el('div', { style: 'display: flex; justify-content: space-between;' }, [el('span', { style: 'color: #64748b;' }, 'Trạng thái:'), el('span', { style: 'color: #0284c7; font-weight: 700;' }, app.status?.name || 'Chờ tiếp nhận')]),
-          el('div', { style: 'display: flex; justify-content: space-between;' }, [el('span', { style: 'color: #64748b;' }, 'Lệ phí:'), el('strong', { class: 'numeric-data', style: 'color: #004482;' }, app.fee ? `${app.fee.toLocaleString('vi-VN')} VNĐ` : '0 VNĐ')]),
+          el('div', { style: 'display: flex; justify-content: space-between;' }, [el('span', { style: 'color: #64748b;' }, 'Lệ phí:'), el('strong', { class: 'numeric-data', style: 'color: #004482;' }, totalFee ? `${totalFee.toLocaleString('vi-VN')} VNĐ` : '0 VNĐ')]),
         ]),
       ]),
+      ...createReceiptPaymentSection({ code, totalFee, paymentMethod, isPaid }),
       el('div', { style: 'display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;' }, [
         el('button', { type: 'button', class: 'btn btn-primary', style: 'background: #004482; font-weight: 700;', onClick: () => navigate(`/tra-cuu?code=${encodeURIComponent(code)}&phone=${encodeURIComponent(phone)}`) }, 'Tra cứu tiến độ hồ sơ này'),
         el('button', { type: 'button', class: 'btn btn-secondary', onClick: () => navigate('/thu-tuc') }, 'Nộp hồ sơ khác'),
       ]),
-    ]));
+    ]);
+    mainArea.replaceChildren(receiptCard);
+  }
+
+  function createReceiptPaymentSection({ code, totalFee, paymentMethod, isPaid }) {
+    if (totalFee <= 0 || isPaid) return isPaid ? [el('div', { style: 'margin-bottom: 1.5rem; padding: 1rem 1.25rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; color: #166534; font-size: 13px; font-weight: 700;' }, 'Thanh toán đã được ghi nhận.') ] : [];
+
+    if (paymentMethod === 'direct') {
+      return [el('div', { style: 'margin-bottom: 1.5rem; padding: 1rem 1.25rem; background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px; color: #92400e; font-size: 13px; line-height: 1.55;' }, [
+        el('strong', { style: 'display: block; margin-bottom: 0.35rem;' }, 'Chờ thanh toán trực tiếp tại quầy'),
+        `Công dân mang mã hồ sơ ${code} và số tiền ${totalFee.toLocaleString('vi-VN')} VNĐ đến Bộ phận Một cửa. Cán bộ sẽ xác nhận thu tiền trên hệ thống.`,
+      ])];
+    }
+
+    const qrBody = el('div', { style: 'display: flex; flex-direction: column; align-items: center; gap: 0.75rem; min-height: 110px; justify-content: center;' }, [
+      el('span', { style: 'font-size: 12.5px; color: #64748b;' }, 'Đang tạo mã QR thanh toán...'),
+    ]);
+    const reloadButton = el('button', { type: 'button', class: 'btn btn-secondary btn-sm', style: 'border: 1px solid #93c5fd; color: #004482; font-weight: 700;' }, 'Tải lại mã QR');
+    let stopPaymentPolling = () => {};
+    const paymentSection = el('div', { style: 'margin-bottom: 1.5rem; border: 1px dashed #004482; border-radius: 6px; padding: 1.5rem; background: #f0f7ff; text-align: center;' }, [
+      el('h4', { style: 'font-size: 14px; font-weight: 800; color: #004482; margin: 0 0 1rem; text-transform: uppercase;' }, 'THANH TOÁN TRỰC TUYẾN QUA VIETQR'),
+      qrBody,
+      el('p', { style: 'margin: 0.75rem 0 1rem; font-size: 12px; color: #475569; line-height: 1.5;' }, `Số tiền cần thanh toán: ${totalFee.toLocaleString('vi-VN')} VNĐ · Mã hồ sơ: ${code}`),
+      reloadButton,
+    ]);
+
+    async function loadCheckout() {
+      stopPaymentPolling();
+      reloadButton.disabled = true;
+      reloadButton.textContent = 'Tải lại mã QR';
+      qrBody.replaceChildren(el('span', { style: 'font-size: 12.5px; color: #64748b;' }, 'Đang tạo mã QR thanh toán...'));
+      try {
+        const checkout = await createApplicationCheckout(api, code);
+        qrBody.replaceChildren(
+          el('img', {
+            src: checkout.qr_url,
+            alt: `Mã QR thanh toán hồ sơ ${code}`,
+            style: 'width: 240px; max-width: 100%; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; padding: 0.35rem;',
+          }),
+          el('span', { style: 'font-size: 12px; color: #475569;' }, 'Mở ứng dụng ngân hàng để quét mã và hoàn tất thanh toán.'),
+        );
+        stopPaymentPolling = pollPaymentIntent(api, checkout.intent_id, {
+          onStatus: (status) => {
+            if (status?.status === 'paid') {
+              stopPaymentPolling();
+              paymentSection.style.background = '#f0fdf4';
+              paymentSection.style.borderColor = '#86efac';
+              qrBody.replaceChildren(
+                el('strong', { style: 'color: #166534; font-size: 15px;' }, '✓ Đã thanh toán thành công'),
+                el('span', { style: 'font-size: 12px; color: #166534;' }, 'Hồ sơ đã đủ điều kiện vào hàng chờ tiếp nhận.'),
+              );
+              reloadButton.disabled = true;
+              reloadButton.textContent = 'Đã thanh toán';
+            }
+          },
+        });
+      } catch (error) {
+        qrBody.replaceChildren(
+          el('span', { style: 'font-size: 12.5px; color: #b91c1c; font-weight: 700;' }, error.message || 'Không thể tạo mã QR thanh toán.'),
+        );
+      } finally {
+        reloadButton.disabled = false;
+      }
+    }
+
+    reloadButton.addEventListener('click', loadCheckout);
+    loadCheckout();
+    return [paymentSection];
   }
 
   checkAuthAndRender();

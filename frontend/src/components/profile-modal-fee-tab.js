@@ -1,5 +1,6 @@
 import { el } from './dom.js';
 import { api } from '../api/client.js';
+import { createApplicationCheckout, pollPaymentIntent } from '../api/payment-checkout.js';
 
 export function renderProfileModalFeeTab(app) {
   const rawData = app.data || app.dulieu || {};
@@ -16,6 +17,9 @@ export function renderProfileModalFeeTab(app) {
   const paymentMethod = paymentMethodCode === 'direct'
     ? 'Thanh toán trực tiếp tại Bộ phận Một cửa'
     : 'Thanh toán trực tuyến qua VietQR';
+  const paymentStatusBadge = el('span', {
+    style: `font-size: 12.5px; font-weight: 700; padding: 0.25rem 0.65rem; border-radius: 4px; background: ${statusBg}; color: ${statusColor}; border: 1px solid ${statusBg};`,
+  }, statusLabel);
 
   const container = el('div', { style: 'display: flex; flex-direction: column; gap: 1.25rem;' });
 
@@ -32,9 +36,7 @@ export function renderProfileModalFeeTab(app) {
     el('div', { class: 'card', style: 'padding: 1.25rem; background: #ffffff; border: 1px solid #d0d7de; border-top: 3px solid #16a34a; border-radius: 6px;' }, [
       el('span', { style: 'font-size: 11.5px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;' }, 'Tình trạng thanh toán'),
       el('div', { style: 'margin: 0.45rem 0 0;' }, [
-        el('span', {
-          style: `font-size: 12.5px; font-weight: 700; padding: 0.25rem 0.65rem; border-radius: 4px; background: ${statusBg}; color: ${statusColor}; border: 1px solid ${statusBg};`,
-        }, statusLabel),
+        paymentStatusBadge,
       ]),
     ]),
     el('div', { class: 'card', style: 'padding: 1.25rem; background: #ffffff; border: 1px solid #d0d7de; border-top: 3px solid #0284c7; border-radius: 6px;' }, [
@@ -85,6 +87,7 @@ export function renderProfileModalFeeTab(app) {
     class: 'btn btn-secondary btn-sm',
     style: 'border: 1px solid #93c5fd; color: #004482; font-weight: 700;',
   }, 'Kiểm tra lại thanh toán');
+  let stopPaymentPolling = () => {};
 
   const qrSection = (!isPaid && !isFree && paymentMethodCode !== 'direct') ? el('div', {
     class: 'card',
@@ -105,16 +108,11 @@ export function renderProfileModalFeeTab(app) {
 
   async function loadCheckout() {
     if (!qrSection) return;
+    stopPaymentPolling();
     qrBody.replaceChildren(el('span', { style: 'font-size: 12.5px; color: #64748b;' }, 'Đang tạo mã QR thanh toán...'));
     refreshPaymentBtn.disabled = true;
     try {
-      const intentResponse = await api.post('/payments/intents', { application_id: appId, provider: 'casso' }, {
-        headers: { 'Idempotency-Key': `application-${appId}-payment` },
-      });
-      const intent = intentResponse?.data;
-      const checkoutResponse = await api.get(`/payments/intents/${intent.id}/checkout`);
-      const checkout = checkoutResponse?.data || {};
-      if (!checkout.qr_url) throw new Error('Cổng thanh toán chưa trả về mã QR.');
+      const checkout = await createApplicationCheckout(api, appId);
       qrBody.replaceChildren(
         el('img', {
           src: checkout.qr_url,
@@ -123,6 +121,25 @@ export function renderProfileModalFeeTab(app) {
         }),
         el('span', { style: 'font-size: 12px; color: #475569;' }, `Số tiền: ${Number(checkout.amount || totalFee).toLocaleString('vi-VN')} đ · Mã hồ sơ: ${appId}`),
       );
+      stopPaymentPolling = pollPaymentIntent(api, checkout.intent_id, {
+        onStatus: (status) => {
+          if (status?.status === 'paid') {
+            stopPaymentPolling();
+            qrSection.style.background = '#f0fdf4';
+            qrSection.style.borderColor = '#86efac';
+            paymentStatusBadge.textContent = 'Đã thu lệ phí / Có biên lai';
+            paymentStatusBadge.style.background = '#dcfce7';
+            paymentStatusBadge.style.color = '#15803d';
+            paymentStatusBadge.style.borderColor = '#dcfce7';
+            qrBody.replaceChildren(
+              el('strong', { style: 'color: #166534; font-size: 15px;' }, '✓ Đã thanh toán thành công'),
+              el('span', { style: 'font-size: 12px; color: #166534;' }, 'Hồ sơ đã đủ điều kiện vào hàng chờ tiếp nhận.'),
+            );
+            refreshPaymentBtn.disabled = true;
+            refreshPaymentBtn.textContent = 'Đã thanh toán';
+          }
+        },
+      });
     } catch (error) {
       qrBody.replaceChildren(
         el('span', { style: 'font-size: 12.5px; color: #b91c1c; font-weight: 700;' }, error.message || 'Không thể tạo mã QR.'),

@@ -223,9 +223,9 @@ class PaymentService
         ]);
     }
 
-    public function handleCassoWebhook(array $payload, ?string $signature): PaymentIntent
+    public function handleCassoWebhook(array $payload, ?string $signature, ?string $secureToken = null): PaymentIntent
     {
-        $transaction = $this->gateway->verifyWebhook($payload, $signature);
+        $transaction = $this->gateway->verifyWebhook($payload, $signature, $secureToken);
 
         return DB::transaction(function () use ($transaction): PaymentIntent {
             $intent = PaymentIntent::query()
@@ -236,6 +236,19 @@ class PaymentService
                 })
                 ->lockForUpdate()
                 ->first();
+
+            if (! $intent) {
+                $reference = strtolower(trim((string) $transaction['reference']));
+                $amount = (float) $transaction['amount'];
+                $intent = PaymentIntent::query()
+                    ->where('provider', 'casso')
+                    ->where('amount', $amount)
+                    ->whereIn('status', [PaymentStatus::Pending->value, PaymentStatus::Paid->value])
+                    ->latest('created_at')
+                    ->lockForUpdate()
+                    ->get()
+                    ->first(fn (PaymentIntent $candidate): bool => str_contains($reference, strtolower((string) $candidate->getKey())));
+            }
 
             if (! $intent) {
                 throw new ApiException('Không tìm thấy payment intent.', 'PAYMENT_INTENT_NOT_FOUND', 404);
