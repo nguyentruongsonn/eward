@@ -78,6 +78,7 @@ export function createProfileApplicationsTab({ navigate }) {
     const thead = el('thead', { style: 'background: #f8fafc; border-bottom: 1px solid #e2e8f0;' }, [
       el('tr', {}, [
         el('th', { style: 'padding: 0.75rem 1rem; text-align: left; font-size: 11.5px; font-weight: 700; color: #475569; text-transform: uppercase;' }, 'Mã hồ sơ / Thủ tục'),
+        el('th', { style: 'padding: 0.75rem 1rem; text-align: left; font-size: 11.5px; font-weight: 700; color: #475569; text-transform: uppercase; white-space: nowrap;' }, 'Thời gian nộp'),
         el('th', { style: 'padding: 0.75rem 1rem; text-align: left; font-size: 11.5px; font-weight: 700; color: #475569; text-transform: uppercase;' }, 'Thời gian'),
         el('th', { style: 'padding: 0.75rem 1rem; text-align: center; font-size: 11.5px; font-weight: 700; color: #475569; text-transform: uppercase;' }, 'Trạng thái'),
         el('th', { style: 'padding: 0.75rem 1rem; text-align: center; font-size: 11.5px; font-weight: 700; color: #475569; text-transform: uppercase;' }, 'Tình trạng thanh toán'),
@@ -99,7 +100,8 @@ export function createProfileApplicationsTab({ navigate }) {
           el('div', { style: 'font-size: 12.5px; font-weight: 600; color: #1e293b; margin-top: 0.2rem;' }, app.procedure_name || app.tenTTHC || 'Thủ tục hành chính'),
           el('div', { style: 'font-size: 11px; color: #64748b; margin-top: 0.15rem;' }, `Hình thức: ${app.delivery_method || app.hinhThuc || 'Trực tuyến'}`),
         ]),
-        el('td', { style: 'padding: 0.85rem 1rem; font-size: 12px; color: #475569;' }, [
+        el('td', { style: 'padding: 0.85rem 1rem; font-size: 12px; color: #475569; white-space: nowrap;' }, formatSubmissionDate(app.submitted_at || app.ngayNop)),
+        el('td', { style: 'padding: 0.85rem 1rem; font-size: 12px; color: #475569; white-space: nowrap;' }, [
           el('div', {}, `Tiếp nhận: ${app.reception_date || app.ngayTiepNhan || 'Chờ tiếp nhận'}`),
           el('div', { style: 'margin-top: 0.2rem; color: #004482; font-weight: 600;' }, `Hẹn trả: ${app.appointment_date || app.ngayHenTra || 'Chưa định'}`),
         ]),
@@ -122,7 +124,7 @@ export function createProfileApplicationsTab({ navigate }) {
       ]);
     }));
 
-    const table = el('table', { style: 'width: 100%; border-collapse: collapse;' }, [thead, tbody]);
+    const table = el('table', { style: 'width: 100%; min-width: 1080px; border-collapse: collapse;' }, [thead, tbody]);
     tableWrapper.replaceChildren(table);
     contentArea.replaceChildren(tableWrapper);
     renderPagination(pagination);
@@ -192,6 +194,20 @@ export function createProfileApplicationsTab({ navigate }) {
   }
 
   return container;
+}
+
+export function formatSubmissionDate(value) {
+  if (!value) return 'Chưa ghi nhận';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
 }
 
 export function buildCitizenApplicationsQuery({ page = 1, perPage = 10, status = '' } = {}) {

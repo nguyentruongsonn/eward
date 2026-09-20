@@ -108,6 +108,7 @@ class ApplicationSubmissionService
                         'fee_items' => $fees['items'],
                         'payment_method' => $paymentMethod,
                     ],
+                    'ngayNop' => now(),
                     'maTrangThai' => $initialStatus->value,
                     'lePhi' => $fees['total'],
                     'hinhThuc' => $data['delivery_method'] === 'direct' ? 'Nhận trực tiếp' : 'Nhận trực tuyến',

@@ -191,6 +191,7 @@ class AppointmentService
             'IDCD' => $citizen->getKey(),
             'maTTHC' => $appointment->maTTHC,
             'maTrangThai' => HoSoStatus::DirectReception->value,
+            'ngayNop' => now(),
             'ngayTiepNhan' => now(),
             'hinhThuc' => 'Nhận trực tiếp',
             'tenChuHoSo' => $user->hoTen,
