@@ -44,68 +44,35 @@ function summaryField(label, value, valueStyle = '') {
   ]);
 }
 
-function renderPaymentPanel({ appId, totalFee, type, onPay, transactionCode }) {
-  const isOnline = type === 'online';
-  const isDirect = type === 'direct';
+function renderPaymentButton({ onPay }) {
   const message = el('div', {
     style: 'display: none; margin-top: 0.75rem; padding: 0.6rem 0.7rem; border: 1px solid #fecaca; border-radius: 4px; background: #fff7f7; color: #b91c1c; font-size: 12px; line-height: 1.45;',
   });
-
-  const panelTone = isOnline
-    ? 'background: #eff6ff; border: 1px solid #bfdbfe; border-left: 3px solid #0b5cab;'
-    : (isDirect
-      ? 'background: #fffbeb; border: 1px solid #fde68a; border-left: 3px solid #b45309;'
-      : 'background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 3px solid #15803d;');
-  const titleColor = isOnline ? '#0f3f70' : (isDirect ? '#92400e' : '#166534');
-  const title = isOnline ? 'Thanh toán trực tuyến' : (isDirect ? 'Thanh toán tại Bộ phận Một cửa' : 'Thanh toán đã được ghi nhận');
-  const note = isOnline
-    ? 'Bạn sẽ được chuyển sang cổng PayOS để hoàn tất giao dịch.'
-    : (isDirect
-      ? 'Công dân mang mã hồ sơ đến quầy. Hồ sơ chuyển sang chờ tiếp nhận sau khi cán bộ xác nhận thu tiền.'
-      : (transactionCode ? `Mã giao dịch: ${transactionCode}` : 'Khoản thu đã được ghi nhận.'));
-
-  let action = null;
-  if (isOnline) {
-    const button = el('button', {
-      type: 'button',
-      class: 'btn btn-primary btn-sm',
-      style: 'min-height: 38px; padding: 0 1rem; font-size: 12.5px; font-weight: 700; white-space: nowrap;',
-      onClick: async () => {
-        button.disabled = true;
-        button.textContent = 'Đang kết nối PayOS...';
-        message.style.display = 'none';
-        try {
-          await onPay();
-        } catch (error) {
-          message.textContent = error.message || 'Không thể mở trang thanh toán PayOS.';
-          message.style.display = 'block';
-          button.disabled = false;
-          button.textContent = 'Thanh toán qua PayOS';
-        }
-      },
-    }, 'Thanh toán qua PayOS');
-    action = button;
-  }
+  const button = el('button', {
+    type: 'button',
+    class: 'btn btn-primary btn-sm',
+    style: 'min-height: 38px; padding: 0 1rem; font-size: 12.5px; font-weight: 700; white-space: nowrap;',
+    onClick: async () => {
+      button.disabled = true;
+      button.textContent = 'Đang kết nối PayOS...';
+      message.style.display = 'none';
+      try {
+        await onPay();
+      } catch (error) {
+        message.textContent = error.message || 'Không thể mở trang thanh toán PayOS.';
+        message.style.display = 'block';
+        button.disabled = false;
+        button.textContent = 'Thanh toán qua PayOS';
+      }
+    },
+  }, 'Thanh toán qua PayOS');
 
   return el('div', {
-    style: `width: min(100%, 760px); align-self: flex-end; box-sizing: border-box; padding: 1rem 1.25rem; border-radius: 6px; ${panelTone}`,
+    style: 'width: min(100%, 760px); align-self: flex-end; display: flex; flex-direction: column; align-items: flex-end;',
   }, [
-    el('div', { style: 'display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap;' }, [
-      el('div', {}, [
-        el('div', { style: `font-size: 13px; font-weight: 800; color: ${titleColor};` }, title),
-        el('div', { style: `margin-top: 0.3rem; color: ${titleColor}; opacity: 0.9; font-size: 12px; line-height: 1.5;` }, note),
-      ]),
-      isOnline ? el('span', { style: 'padding: 0.2rem 0.5rem; border: 1px solid #bfdbfe; border-radius: 4px; background: #ffffff; color: #1d4ed8; font-size: 11px; font-weight: 800;' }, 'PayOS') : null,
-    ]),
-    el('div', { style: 'display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 0.9rem; padding-top: 0.8rem; border-top: 1px solid rgba(148, 163, 184, 0.28);' }, [
-      el('div', {}, [
-        el('div', { style: `font-size: 11px; color: ${titleColor}; opacity: 0.85;` }, `Mã hồ sơ: ${appId}`),
-        el('strong', { style: `display: block; margin-top: 0.15rem; color: ${titleColor}; font-size: 17px;` }, formatVnd(totalFee)),
-      ]),
-      action,
-    ]),
+    button,
     message,
-  ].filter(Boolean));
+  ]);
 }
 
 export function renderProfileModalFeeTab(app) {
@@ -115,7 +82,6 @@ export function renderProfileModalFeeTab(app) {
   const paymentMethod = isDirect
     ? 'Thanh toán trực tiếp tại Bộ phận Một cửa'
     : 'Thanh toán trực tuyến qua PayOS';
-  const transactionCode = app.payment_status?.transaction_code;
   const container = el('div', { style: 'display: flex; flex-direction: column; gap: 1.25rem;' });
 
   const status = isFree
@@ -169,18 +135,14 @@ export function renderProfileModalFeeTab(app) {
     ]),
   ]);
 
-  const paymentPanel = isFree
-    ? null
-    : renderPaymentPanel({
-      appId,
-      totalFee,
-      type: isPaid ? 'paid' : (isDirect ? 'direct' : 'online'),
-      transactionCode,
+  const paymentPanel = !isFree && !isPaid && !isDirect
+    ? renderPaymentButton({
       onPay: async () => {
         const checkout = await createApplicationCheckout(api, appId);
         redirectToPaymentCheckout(checkout);
       },
-    });
+    })
+    : null;
 
   container.append(summaryCard, feeDetailsCard, paymentPanel);
   return container;
