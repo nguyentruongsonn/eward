@@ -1,6 +1,6 @@
 import { el } from '../components/dom.js';
 import { api, getAuthToken, getStoredUser, setStoredUser } from '../api/client.js';
-import { createApplicationCheckout, pollPaymentIntent, renderPaymentQr } from '../api/payment-checkout.js';
+import { createApplicationCheckout, redirectToPaymentCheckout } from '../api/payment-checkout.js';
 import { openAuthModal } from '../components/auth-modal.js';
 import { createDynamicForm } from '../components/dynamic-form.js';
 import { createSubmissionDossier } from '../components/submission-dossier.js';
@@ -259,53 +259,26 @@ export function renderSubmitApplicationPage({ params, searchParams, navigate }) 
       ])];
     }
 
-    const qrBody = el('div', { style: 'display: flex; flex-direction: column; align-items: center; gap: 0.75rem; min-height: 110px; justify-content: center;' }, [
-      el('span', { style: 'font-size: 12.5px; color: #64748b;' }, 'Đang tạo mã QR thanh toán...'),
+    const paymentBody = el('div', { style: 'display: flex; flex-direction: column; align-items: center; gap: 0.75rem; min-height: 110px; justify-content: center;' }, [
+      el('span', { style: 'font-size: 12.5px; color: #64748b;' }, 'Đang mở trang thanh toán PayOS...'),
     ]);
-    const reloadButton = el('button', { type: 'button', class: 'btn btn-secondary btn-sm', style: 'border: 1px solid #93c5fd; color: #004482; font-weight: 700;' }, 'Tải lại mã QR');
-    let stopPaymentPolling = () => {};
+    const reloadButton = el('button', { type: 'button', class: 'btn btn-secondary btn-sm', style: 'border: 1px solid #93c5fd; color: #004482; font-weight: 700;' }, 'Mở lại trang thanh toán');
     const paymentSection = el('div', { style: 'margin-bottom: 1.5rem; border: 1px dashed #004482; border-radius: 6px; padding: 1.5rem; background: #f0f7ff; text-align: center;' }, [
       el('h4', { style: 'font-size: 14px; font-weight: 800; color: #004482; margin: 0 0 1rem; text-transform: uppercase;' }, 'THANH TOÁN TRỰC TUYẾN QUA PAYOS'),
-      qrBody,
+      paymentBody,
       el('p', { style: 'margin: 0.75rem 0 1rem; font-size: 12px; color: #475569; line-height: 1.5;' }, `Số tiền cần thanh toán: ${totalFee.toLocaleString('vi-VN')} VNĐ · Mã hồ sơ: ${code}`),
       reloadButton,
     ]);
 
     async function loadCheckout() {
-      stopPaymentPolling();
       reloadButton.disabled = true;
-      reloadButton.textContent = 'Tải lại mã QR';
-      qrBody.replaceChildren(el('span', { style: 'font-size: 12.5px; color: #64748b;' }, 'Đang tạo mã QR thanh toán...'));
+      paymentBody.replaceChildren(el('span', { style: 'font-size: 12.5px; color: #64748b;' }, 'Đang mở trang thanh toán PayOS...'));
       try {
         const checkout = await createApplicationCheckout(api, code);
-        const qrDataUrl = await renderPaymentQr(checkout.qr_code);
-        qrBody.replaceChildren(
-          el('img', {
-            src: qrDataUrl,
-            alt: `Mã QR thanh toán hồ sơ ${code}`,
-            style: 'width: 240px; max-width: 100%; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; padding: 0.35rem;',
-          }),
-          el('span', { style: 'font-size: 12px; color: #475569;' }, 'Mở ứng dụng ngân hàng để quét mã và hoàn tất thanh toán.'),
-          el('a', { href: checkout.checkout_url, target: '_blank', rel: 'noreferrer', style: 'font-size: 12px; font-weight: 700; color: #004482;' }, 'Mở trang thanh toán PayOS'),
-        );
-        stopPaymentPolling = pollPaymentIntent(api, checkout.intent_id, {
-          onStatus: (status) => {
-            if (status?.status === 'paid') {
-              stopPaymentPolling();
-              paymentSection.style.background = '#f0fdf4';
-              paymentSection.style.borderColor = '#86efac';
-              qrBody.replaceChildren(
-                el('strong', { style: 'color: #166534; font-size: 15px;' }, '✓ Đã thanh toán thành công'),
-                el('span', { style: 'font-size: 12px; color: #166534;' }, 'Hồ sơ đã đủ điều kiện vào hàng chờ tiếp nhận.'),
-              );
-              reloadButton.disabled = true;
-              reloadButton.textContent = 'Đã thanh toán';
-            }
-          },
-        });
+        redirectToPaymentCheckout(checkout);
       } catch (error) {
-        qrBody.replaceChildren(
-          el('span', { style: 'font-size: 12.5px; color: #b91c1c; font-weight: 700;' }, error.message || 'Không thể tạo mã QR thanh toán.'),
+        paymentBody.replaceChildren(
+          el('span', { style: 'font-size: 12.5px; color: #b91c1c; font-weight: 700;' }, error.message || 'Không thể mở trang thanh toán PayOS.'),
         );
       } finally {
         reloadButton.disabled = false;

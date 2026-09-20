@@ -1,5 +1,3 @@
-import QRCode from 'qrcode';
-
 export async function createApplicationCheckout(apiClient, applicationId) {
   const intentResponse = await apiClient.post('/payments/intents', {
     application_id: applicationId,
@@ -21,16 +19,15 @@ export async function createApplicationCheckout(apiClient, applicationId) {
   return { ...checkout, intent_id: intent.id };
 }
 
-export async function renderPaymentQr(qrCode) {
-  if (!qrCode) {
-    throw new Error('PayOS chưa trả về dữ liệu mã QR.');
+export function redirectToPaymentCheckout(checkout, browserLocation = globalThis.window?.location) {
+  if (!checkout?.checkout_url) {
+    throw new Error('PayOS chưa trả về đường dẫn thanh toán.');
+  }
+  if (!browserLocation?.assign) {
+    throw new Error('Không thể mở trang thanh toán PayOS trên trình duyệt hiện tại.');
   }
 
-  return QRCode.toDataURL(qrCode, {
-    errorCorrectionLevel: 'M',
-    margin: 2,
-    width: 280,
-  });
+  browserLocation.assign(checkout.checkout_url);
 }
 
 export async function getPaymentIntentStatus(apiClient, intentId) {
