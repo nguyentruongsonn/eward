@@ -40,7 +40,7 @@ const rawGroups = [
         roles: ["administrator", "one-stop"],
       },
       {
-        path: "/can-bo/ho-so?status=1&payment_status=unpaid",
+        path: "/can-bo/ho-so?status=13",
         label: "Chờ thanh toán",
         roles: ["administrator", "one-stop"],
       },

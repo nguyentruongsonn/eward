@@ -173,7 +173,7 @@ export function createStaffActionButtons({ app, role, handleAction, loadDetail }
       },
     }),
   }, act.label));
-  if (isOneStop && sid === 1 && Number(app.fee || 0) > 0 && !app.payment_status?.is_paid) {
+  if (isOneStop && sid === 13 && Number(app.fee || 0) > 0 && !app.payment_status?.is_paid) {
     btns.unshift(el('button', {
       type: 'button', class: 'btn btn-sm',
       style: 'background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; font-weight: 700; height: 32px; font-size: 12.5px; padding: 0 0.85rem;',

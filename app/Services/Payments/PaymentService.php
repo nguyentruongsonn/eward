@@ -3,6 +3,7 @@
 namespace App\Services\Payments;
 
 use App\Contracts\Payments\PaymentGateway;
+use App\Enums\HoSoStatus;
 use App\Enums\PaymentStatus;
 use App\Exceptions\ApiException;
 use App\Models\HoSoWorkflowEvent;
@@ -166,14 +167,23 @@ class PaymentService
                 'moTa' => $note ?: 'Cán bộ xác nhận thu lệ phí trực tiếp tại quầy.',
             ]);
 
+            $fromStatus = (int) $application->maTrangThai;
+            $toStatus = $fromStatus === HoSoStatus::PendingPayment->value
+                ? HoSoStatus::PendingReception->value
+                : $fromStatus;
+            if ($fromStatus === HoSoStatus::PendingPayment->value) {
+                $application->maTrangThai = $toStatus;
+                $application->save();
+            }
+
             HoSoWorkflowEvent::create([
                 'maHSXL' => $application->getKey(),
                 'event_type' => 'counter_payment_confirmed',
                 'actor_id' => $actor->getKey(),
                 'actor_name' => $actor->hoTen,
                 'actor_role' => $actor->vaiTro,
-                'from_status' => $application->maTrangThai,
-                'to_status' => $application->maTrangThai,
+                'from_status' => $fromStatus,
+                'to_status' => $toStatus,
                 'note' => $note ?: 'Xác nhận thu lệ phí trực tiếp tại quầy.',
                 'metadata' => ['receipt_number' => $receiptNumber, 'amount' => $application->lePhi],
                 'created_at' => now(),
@@ -311,6 +321,25 @@ class PaymentService
         $intent->provider_transaction_id = $providerTransactionId ?: $intent->provider_transaction_id;
         $intent->metadata = $metadata;
         $intent->save();
+
+        $application = HoSoXuLy::query()->whereKey($intent->maHSXL)->lockForUpdate()->first();
+        if ($application && (int) $application->maTrangThai === HoSoStatus::PendingPayment->value) {
+            $application->maTrangThai = HoSoStatus::PendingReception->value;
+            $application->save();
+
+            HoSoWorkflowEvent::create([
+                'maHSXL' => $application->getKey(),
+                'event_type' => 'payment_confirmed',
+                'actor_id' => null,
+                'actor_name' => 'PayOS',
+                'actor_role' => 'Cổng thanh toán',
+                'from_status' => HoSoStatus::PendingPayment->value,
+                'to_status' => HoSoStatus::PendingReception->value,
+                'note' => 'Thanh toán đã được PayOS xác thực.',
+                'metadata' => $metadata,
+                'created_at' => now(),
+            ]);
+        }
 
         LichSuThanhToan::query()->updateOrCreate(
             ['maGD' => $intent->provider_transaction_id ?: $intent->getKey()],

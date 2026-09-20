@@ -10,7 +10,9 @@ export function buildWorkflowSvg(app) {
 
   let activeStep = 1;
   let statusText = 'Cán bộ một cửa tiếp nhận';
-  if (sid === 2 || sid === 5 || sid === 6) {
+  if (sid === 13) {
+    statusText = 'Chờ thanh toán';
+  } else if (sid === 2 || sid === 5 || sid === 6) {
     activeStep = 2;
     statusText = sid === 5 ? 'Yêu cầu bổ sung giấy tờ' : (sid === 6 ? 'Tiếp tục xử lý sau bổ sung' : 'Chuyên viên đang thụ lý');
   } else if (sid === 12) {

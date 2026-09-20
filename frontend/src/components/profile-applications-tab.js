@@ -160,7 +160,9 @@ export function createProfileApplicationsTab({ navigate }) {
     let color = '#1d4ed8';
     let border = '#bfdbfe';
 
-    if (id === 1) {
+    if (id === 13) {
+      bg = '#fff7ed'; color = '#c2410c'; border = '#ffedd5';
+    } else if (id === 1) {
       bg = '#fefce8'; color = '#a16207'; border = '#fef08a';
     } else if (id === 2 || id === 4) {
       bg = '#eff6ff'; color = '#1d4ed8'; border = '#bfdbfe';
