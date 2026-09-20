@@ -5,21 +5,44 @@ import { openApplicationDetailModal } from './profile-application-detail-modal.j
 export function createProfileApplicationsTab({ navigate }) {
   const container = el('div', { class: 'profile-tab-content' });
 
+  let currentPage = 1;
+  let currentStatus = '';
+  const perPage = 10;
+  const filterBar = el('div', {
+    style: 'display: flex; justify-content: flex-end; align-items: center; gap: 0.6rem; margin-bottom: 0.85rem; flex-wrap: wrap;',
+  });
+  const statusSelect = el('select', {
+    class: 'input',
+    style: 'height: 36px; min-width: 190px; font-size: 12.5px;',
+    onChange: (event) => {
+      currentStatus = event.target.value;
+      currentPage = 1;
+      loadApplications();
+    },
+  }, [
+    el('option', { value: '' }, 'Tất cả trạng thái'),
+    el('option', { value: 'dang_xu_ly' }, 'Đang xử lý'),
+    el('option', { value: 'da_hoan_thanh' }, 'Đã hoàn thành'),
+  ]);
+  filterBar.append(el('span', { style: 'font-size: 12px; color: #64748b; font-weight: 600;' }, 'Lọc hồ sơ:'), statusSelect);
+
   const contentArea = el('div', { style: 'min-height: 200px;' }, [
     el('div', { style: 'text-align: center; padding: 3rem 1rem; color: #64748b; font-size: 13px;' }, 'Đang tải danh sách hồ sơ...'),
   ]);
+  const paginationArea = el('div', { style: 'display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-top: 0.85rem; font-size: 12px; color: #64748b; flex-wrap: wrap;' });
 
-  container.append(contentArea);
+  container.append(filterBar, contentArea, paginationArea);
   loadApplications();
 
-  async function loadApplications(statusFilter = '') {
+  async function loadApplications() {
     contentArea.replaceChildren(el('div', { style: 'text-align: center; padding: 3rem 1rem; color: #64748b; font-size: 13px;' }, 'Đang tải danh sách hồ sơ...'));
+    paginationArea.replaceChildren();
 
     try {
-      const url = `/citizen/applications${statusFilter ? `?trang_thai=${encodeURIComponent(statusFilter)}` : ''}`;
+      const url = `/citizen/applications${buildCitizenApplicationsQuery({ page: currentPage, perPage, status: currentStatus })}`;
       const res = await api.get(url);
       const list = res?.data || [];
-      renderList(list);
+      renderList(list, getPaginationState(res?.meta?.pagination));
     } catch (err) {
       contentArea.replaceChildren(el('div', {
         style: 'padding: 2rem; background: #fee2e2; border: 1px solid #fca5a5; border-radius: 6px; color: #991b1b; text-align: center; font-size: 13px; font-weight: 600;',
@@ -27,7 +50,7 @@ export function createProfileApplicationsTab({ navigate }) {
     }
   }
 
-  function renderList(list) {
+  function renderList(list, pagination) {
     if (!list || list.length === 0) {
       contentArea.replaceChildren(el('div', {
         class: 'card',
@@ -43,6 +66,7 @@ export function createProfileApplicationsTab({ navigate }) {
           onClick: () => navigate('/thu-tuc'),
         }, 'Khám phá danh mục thủ tục'),
       ]));
+      renderPagination(pagination);
       return;
     }
 
@@ -101,6 +125,33 @@ export function createProfileApplicationsTab({ navigate }) {
     const table = el('table', { style: 'width: 100%; border-collapse: collapse;' }, [thead, tbody]);
     tableWrapper.replaceChildren(table);
     contentArea.replaceChildren(tableWrapper);
+    renderPagination(pagination);
+  }
+
+  function renderPagination(pagination) {
+    const { page, perPage: pageSize, total, lastPage } = pagination;
+    if (lastPage <= 1) {
+      paginationArea.replaceChildren(total > 0 ? el('span', {}, `Tổng số: ${total} hồ sơ`) : '');
+      return;
+    }
+
+    const previous = el('button', {
+      type: 'button',
+      class: 'btn btn-secondary btn-sm',
+      disabled: page <= 1,
+      onClick: () => { currentPage = page - 1; loadApplications(); },
+    }, '‹ Trước');
+    const next = el('button', {
+      type: 'button',
+      class: 'btn btn-secondary btn-sm',
+      disabled: page >= lastPage,
+      onClick: () => { currentPage = page + 1; loadApplications(); },
+    }, 'Sau ›');
+    paginationArea.replaceChildren(
+      el('span', {}, `Hiển thị ${Math.min((page - 1) * pageSize + 1, total)}–${Math.min(page * pageSize, total)} / ${total} hồ sơ`),
+      el('span', { style: 'font-weight: 700; color: #334155;' }, `Trang ${page}/${lastPage}`),
+      el('div', { style: 'display: flex; gap: 0.45rem;' }, [previous, next]),
+    );
   }
 
   function renderStatusBadge(statusId, statusName) {
@@ -139,4 +190,25 @@ export function createProfileApplicationsTab({ navigate }) {
   }
 
   return container;
+}
+
+export function buildCitizenApplicationsQuery({ page = 1, perPage = 10, status = '' } = {}) {
+  const query = new URLSearchParams();
+  if (status) query.set('trang_thai', status);
+  query.set('page', String(Math.max(1, page)));
+  query.set('per_page', String(Math.max(1, perPage)));
+  return `?${query.toString()}`;
+}
+
+export function getPaginationState(meta = {}) {
+  const perPage = Math.max(1, Number(meta.per_page || 10));
+  const total = Math.max(0, Number(meta.total || 0));
+  const lastPage = Math.max(1, Number(meta.last_page || Math.ceil(total / perPage) || 1));
+
+  return {
+    page: Math.min(Math.max(1, Number(meta.page || 1)), lastPage),
+    perPage,
+    total,
+    lastPage,
+  };
 }

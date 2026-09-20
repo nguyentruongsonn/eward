@@ -102,6 +102,18 @@ class PaymentController extends Controller
         return ApiResponse::success($this->payments->checkout($item), 'Thông tin thanh toán.', 200, $request);
     }
 
+    public function sync(Request $request): JsonResponse
+    {
+        $orderCode = $request->integer('orderCode');
+        if ($orderCode <= 0) {
+            return ApiResponse::error('Mã đơn PayOS không hợp lệ.', 'PAYMENT_ORDER_CODE_INVALID', 422, [], $request);
+        }
+
+        $intent = $this->payments->syncPayOSPayment($request->user('api'), $orderCode);
+
+        return ApiResponse::success(new PaymentIntentResource($intent), 'Đã đồng bộ trạng thái thanh toán.', 200, $request);
+    }
+
     public function payosWebhook(Request $request): JsonResponse
     {
         $intent = $this->payments->handlePayOSWebhook(

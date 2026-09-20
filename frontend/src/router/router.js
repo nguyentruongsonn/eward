@@ -10,7 +10,7 @@ export class Router {
     this.currentTeardown = null;
 
     window.addEventListener('popstate', () => {
-      this.resolve(window.location.pathname);
+      this.resolve(currentBrowserPath());
     });
 
     document.addEventListener('click', (e) => {
@@ -97,6 +97,11 @@ export class Router {
   }
 
   start() {
-    this.resolve(window.location.pathname);
+    this.resolve(currentBrowserPath());
   }
+}
+
+export function currentBrowserPath(location = globalThis.window?.location) {
+  if (!location) return '/';
+  return `${location.pathname || '/'}${location.search || ''}${location.hash || ''}`;
 }
