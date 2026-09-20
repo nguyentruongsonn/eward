@@ -83,7 +83,7 @@ export function createProfileAccountTab({ user, onProfileUpdated }) {
     ]),
     el('div', { style: 'display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;' }, [
       formField('Họ và tên (*)', nameInput),
-      formField('Địa chỉ Email', emailInput, 'Email định danh tài khoản không thể tự đổi.'),
+      formField('Địa chỉ Email', emailInput),
       formField('Số điện thoại (*)', phoneInput),
     ]),
   ]);

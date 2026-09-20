@@ -8,6 +8,7 @@ use App\Http\Requests\Api\V1\HoSo\ApplicationListRequest;
 use App\Http\Requests\Api\V1\HoSo\CancelApplicationRequest;
 use App\Http\Requests\Api\V1\HoSo\CreateApplicationRequest;
 use App\Http\Requests\Api\V1\HoSo\RateApplicationRequest;
+use App\Http\Requests\Api\V1\HoSo\UpdateCitizenApplicationRequest;
 use App\Http\Resources\Api\V1\ApplicationResource;
 use App\Http\Resources\Api\V1\RatingResource;
 use App\Models\HoSoXuLy;
@@ -56,6 +57,17 @@ class ApplicationController extends Controller
         $application = $this->submissionService->submit($user, $request->validated(), $request->header('Idempotency-Key'));
 
         return ApiResponse::success(new ApplicationResource($application), 'Nộp hồ sơ thành công.', 201, $request);
+    }
+
+    public function update(UpdateCitizenApplicationRequest $request, string $application): JsonResponse
+    {
+        /** @var Nguoi $user */
+        $user = $request->user('api');
+        $item = $this->submissionService->findForUser($user, $application);
+        $this->authorize('update', $item);
+        $item = $this->submissionService->updateDraft($item, $request->validated('data'));
+
+        return ApiResponse::success(new ApplicationResource($item), 'Đã cập nhật hồ sơ.', 200, $request);
     }
 
     public function show(Request $request, string $application): JsonResponse
