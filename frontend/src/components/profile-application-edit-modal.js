@@ -19,17 +19,8 @@ const labels = {
   ghi_chu: 'Ghi chú',
 };
 
-export function openApplicationEditModal(app, { onSaved } = {}) {
-  const overlay = el('div', {
-    style: 'position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(15,23,42,0.65);',
-  });
-  const modal = el('div', {
-    class: 'card',
-    style: 'width: min(760px, 96vw); max-height: 92vh; overflow: hidden; display: flex; flex-direction: column; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);',
-  });
-  const body = el('div', { style: 'padding: 1.25rem 1.5rem; overflow-y: auto;' });
+export function createApplicationEditForm(app, { onSaved, onBusy } = {}) {
   const formId = `application-edit-form-${Date.now()}`;
-  const saveButton = el('button', { type: 'submit', form: formId, class: 'btn btn-primary', style: 'background: #004482; font-weight: 700;' }, 'Lưu thay đổi');
   const raw = app.data || app.dulieu || {};
   const initial = raw.payload && typeof raw.payload === 'object' ? raw.payload : raw;
   const fields = Object.entries(initial).filter(([key]) => !['attached_files', 'delivery_method', 'payment_method'].includes(key));
@@ -42,10 +33,10 @@ export function openApplicationEditModal(app, { onSaved } = {}) {
 
   const form = el('form', {
     id: formId,
+    style: 'display: flex; flex-direction: column; gap: 1.25rem;',
     onSubmit: async (event) => {
       event.preventDefault();
-      saveButton.disabled = true;
-      saveButton.textContent = 'Đang lưu...';
+      onBusy?.(true);
       const data = {};
       let valid = true;
       controls.forEach(({ control, original }) => {
@@ -64,8 +55,7 @@ export function openApplicationEditModal(app, { onSaved } = {}) {
       });
 
       if (!valid) {
-        saveButton.disabled = false;
-        saveButton.textContent = 'Lưu thay đổi';
+        onBusy?.(false);
         return;
       }
 
@@ -74,28 +64,24 @@ export function openApplicationEditModal(app, { onSaved } = {}) {
         for (const entry of documentEntries) {
           const selected = fileInputs.get(entry.documentTypeId)?.files?.[0];
           if (!selected) continue;
-          if (!entry.documentTypeId) {
-            throw new Error(`Không xác định được loại giấy tờ cho "${entry.title}".`);
-          }
           const body = new FormData();
           body.append('document_type', String(entry.documentTypeId));
           body.append('file', selected);
           await api.post(`/citizen/applications/${app.id || app.maHSXL}/documents`, body);
         }
         showToast.success('Đã cập nhật hồ sơ.');
-        overlay.remove();
-        if (typeof onSaved === 'function') onSaved(response?.data || response);
+        onBusy?.(false);
+        onSaved?.(response?.data || response);
       } catch (err) {
-        showToast.error(err?.data?.message || err?.message || 'Không thể cập nhật hồ sơ.');
-        saveButton.disabled = false;
-        saveButton.textContent = 'Lưu thay đổi';
+        showToast.error(err?.payload?.message || err?.message || 'Không thể cập nhật hồ sơ.');
+        onBusy?.(false);
       }
     },
   });
 
-  if (fields.length === 0) {
-    form.append(el('div', { style: 'padding: 1.5rem; text-align: center; color: #64748b; font-size: 13px;' }, 'Hồ sơ chưa có thông tin biểu mẫu để chỉnh sửa.'));
-  } else {
+  form.append(el('div', { style: 'padding: 0.75rem 1rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 5px; color: #1e3a8a; font-size: 12.5px; line-height: 1.5;' }, 'Chỉ có thể chỉnh sửa khi hồ sơ đang chờ thanh toán hoặc chờ tiếp nhận. Thông tin lệ phí và phương thức thanh toán được bảo toàn.'));
+
+  if (fields.length > 0) {
     const grid = el('div', { style: 'display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;' });
     fields.forEach(([key, value]) => {
       const isStructured = value !== null && typeof value === 'object';
@@ -114,25 +100,8 @@ export function openApplicationEditModal(app, { onSaved } = {}) {
     form.append(grid);
   }
 
-  const close = () => overlay.remove();
-  modal.append(
-    el('div', { style: 'padding: 1rem 1.5rem; background: #ffffff; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;' }, [
-      el('div', {}, [
-        el('div', { style: 'font-size: 11px; font-weight: 800; color: #004b87; text-transform: uppercase;' }, 'CHỈNH SỬA HỒ SƠ'),
-        el('h2', { style: 'font-size: 16px; color: #004b87; margin: 0.25rem 0 0;' }, app.id || app.maHSXL || 'Hồ sơ'),
-      ]),
-      el('button', { type: 'button', class: 'btn btn-secondary btn-sm', onClick: close }, 'Đóng ✕'),
-    ]),
-    body,
-    el('div', { style: 'display: flex; justify-content: flex-end; gap: 0.6rem; padding: 0.9rem 1.5rem; background: #ffffff; border-top: 1px solid #e2e8f0;' }, [
-      el('button', { type: 'button', class: 'btn btn-secondary', onClick: close }, 'Hủy'),
-      saveButton,
-    ]),
-  );
-  body.append(el('p', { style: 'margin: 0 0 1rem; color: #64748b; font-size: 12.5px; line-height: 1.5;' }, 'Chỉ có thể chỉnh sửa khi hồ sơ đang chờ thanh toán hoặc chờ tiếp nhận. Thông tin lệ phí và phương thức thanh toán được hệ thống bảo toàn.'));
-  body.append(form);
   if (documentEntries.length > 0) {
-    const dossierSection = el('section', { style: 'margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;' }, [
+    const dossierSection = el('section', { style: 'padding-top: 1rem; border-top: 1px solid #e2e8f0;' }, [
       el('div', { style: 'font-size: 13px; font-weight: 800; color: #004482; margin-bottom: 0.25rem;' }, 'THÀNH PHẦN HỒ SƠ'),
       el('div', { style: 'font-size: 12px; color: #64748b; margin-bottom: 0.75rem;' }, 'Chọn tệp mới để thay thế tài liệu đã nộp cùng loại.'),
     ]);
@@ -144,7 +113,6 @@ export function openApplicationEditModal(app, { onSaved } = {}) {
       const chooseButton = el('button', {
         type: 'button',
         class: 'btn btn-secondary btn-sm',
-        disabled: !entry.documentTypeId,
         style: 'white-space: nowrap; font-size: 11.5px; padding: 0.3rem 0.65rem;',
         onClick: () => fileInput.click(),
       }, entry.fileName ? 'Đổi tệp' : 'Chọn tệp');
@@ -164,8 +132,30 @@ export function openApplicationEditModal(app, { onSaved } = {}) {
       ]));
     });
     dossierSection.append(dossierList);
-    body.append(dossierSection);
+    form.append(dossierSection);
   }
+
+  return { element: form, formId };
+}
+
+export function openApplicationEditModal(app, { onSaved } = {}) {
+  const overlay = el('div', { style: 'position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(15,23,42,0.65);' });
+  const modal = el('div', { class: 'card', style: 'width: min(760px, 96vw); max-height: 92vh; overflow: hidden; display: flex; flex-direction: column; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);' });
+  let busy = false;
+  const editor = createApplicationEditForm(app, { onSaved: () => { overlay.remove(); onSaved?.(); }, onBusy: (value) => { busy = value; saveButton.disabled = value; saveButton.textContent = value ? 'Đang lưu...' : 'Lưu thay đổi'; } });
+  const saveButton = el('button', { type: 'submit', form: editor.formId, class: 'btn btn-primary', style: 'background: #004482; font-weight: 700;' }, 'Lưu thay đổi');
+  const close = () => { if (!busy) overlay.remove(); };
+  modal.append(
+    el('div', { style: 'padding: 1rem 1.5rem; background: #ffffff; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;' }, [
+      el('div', {}, [el('div', { style: 'font-size: 11px; font-weight: 800; color: #004b87; text-transform: uppercase;' }, 'CHỈNH SỬA HỒ SƠ'), el('h2', { style: 'font-size: 16px; color: #004b87; margin: 0.25rem 0 0;' }, app.id || app.maHSXL || 'Hồ sơ')]),
+      el('button', { type: 'button', class: 'btn btn-secondary btn-sm', onClick: close }, 'Đóng ✕'),
+    ]),
+    el('div', { style: 'padding: 1.25rem 1.5rem; overflow-y: auto;' }, editor.element),
+    el('div', { style: 'display: flex; justify-content: flex-end; gap: 0.6rem; padding: 0.9rem 1.5rem; background: #ffffff; border-top: 1px solid #e2e8f0;' }, [
+      el('button', { type: 'button', class: 'btn btn-secondary', onClick: close }, 'Hủy'),
+      saveButton,
+    ]),
+  );
   overlay.addEventListener('click', (event) => { if (event.target === overlay) close(); });
   overlay.append(modal);
   document.body.append(overlay);

@@ -1,7 +1,6 @@
 import { el } from './dom.js';
 import { api } from '../api/client.js';
 import { openApplicationDetailModal } from './profile-application-detail-modal.js';
-import { openApplicationEditModal } from './profile-application-edit-modal.js';
 import { showToast } from './toast.js';
 
 export function createProfileApplicationsTab({ navigate }) {
@@ -131,15 +130,14 @@ export function createProfileApplicationsTab({ navigate }) {
     }, 'Thao tác ▾');
     const menu = el('div', { style: 'position: absolute; right: 0; top: calc(100% + 0.3rem); z-index: 20; min-width: 170px; padding: 0.3rem; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 5px; box-shadow: 0 8px 20px rgba(15,23,42,0.12);' });
     const close = () => { details.open = false; };
-    getCitizenApplicationActions(app).forEach((action) => {
-      const labels = { view: 'Xem chi tiết', pay: 'Thanh toán', edit: 'Chỉnh sửa hồ sơ', cancel: 'Rút hồ sơ' };
+    getCitizenApplicationActions(app).filter((action) => action !== 'edit').forEach((action) => {
+      const labels = { view: 'Xem chi tiết', pay: 'Thanh toán', cancel: 'Rút hồ sơ' };
       const button = el('button', {
         type: 'button',
         style: `display: block; width: 100%; padding: 0.5rem 0.65rem; border: none; background: transparent; color: ${action === 'cancel' ? '#b91c1c' : '#334155'}; text-align: left; font-size: 12px; cursor: pointer; border-radius: 3px;`,
         onClick: async () => {
           close();
-          if (action === 'view' || action === 'pay') return openApplicationDetailModal(app);
-          if (action === 'edit') return openApplicationEditModal(app, { onSaved: () => loadApplications() });
+          if (action === 'view' || action === 'pay') return openApplicationDetailModal(app, { onSaved: () => loadApplications() });
           if (action === 'cancel') {
             if (!window.confirm('Bạn có chắc muốn rút hồ sơ này?')) return;
             try {

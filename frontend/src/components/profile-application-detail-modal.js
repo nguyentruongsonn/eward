@@ -2,8 +2,9 @@ import { el } from './dom.js';
 import { renderProfileModalInfoTab } from './profile-modal-info-tab.js';
 import { renderProfileModalDossierTab } from './profile-modal-dossier-tab.js';
 import { renderProfileModalFeeTab } from './profile-modal-fee-tab.js';
+import { createApplicationEditForm } from './profile-application-edit-modal.js';
 
-export function openApplicationDetailModal(app) {
+export function openApplicationDetailModal(app, { onSaved } = {}) {
   const overlay = el('div', {
     style: 'position: fixed; inset: 0; background: rgba(15,23,42,0.65); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 0.75rem;',
   });
@@ -32,8 +33,12 @@ export function openApplicationDetailModal(app) {
   ]);
 
   let activeTab = 'info';
+  let isEditing = false;
+  let isSaving = false;
+  let editor = null;
   const tabNav = el('div', { style: 'display: flex; border-bottom: 1px solid #e2e8f0; background: #ffffff; padding: 0 1.5rem;' });
   const tabBody = el('div', { style: 'padding: 1.5rem; overflow-y: auto; flex: 1;' });
+  const footer = el('div', { style: 'display: flex; justify-content: flex-end; gap: 0.6rem; padding: 0.85rem 1.5rem; background: #ffffff; border-top: 1px solid #e2e8f0;' });
 
   const tabs = [
     { id: 'info', label: 'Thông tin chung' },
@@ -53,6 +58,14 @@ export function openApplicationDetailModal(app) {
   }
 
   function renderContent() {
+    if (isEditing) {
+      tabNav.style.display = 'none';
+      tabBody.style.padding = '1.25rem 1.5rem';
+      tabBody.replaceChildren(editor.element);
+      return;
+    }
+    tabNav.style.display = 'flex';
+    tabBody.style.padding = '1.5rem';
     if (activeTab === 'info') {
       tabBody.replaceChildren(renderProfileModalInfoTab(app));
     } else if (activeTab === 'dossier') {
@@ -63,8 +76,51 @@ export function openApplicationDetailModal(app) {
   }
 
   function closeModal() {
+    if (isSaving) return;
     overlay.remove();
     document.removeEventListener('keydown', onKeyDown);
+  }
+
+  function canEdit() {
+    return [13, 1].includes(Number(app.status?.id || app.status_id || app.maTrangThai));
+  }
+
+  function renderFooter() {
+    footer.replaceChildren();
+    if (isEditing) {
+      footer.append(
+        el('button', { type: 'button', class: 'btn btn-secondary', disabled: isSaving, onClick: () => { if (!isSaving) { isEditing = false; editor = null; renderTabs(); renderContent(); renderFooter(); } } }, 'Hủy'),
+        el('button', { type: 'submit', form: editor.formId, class: 'btn btn-primary', disabled: isSaving, style: 'background: #004482; font-weight: 700;' }, isSaving ? 'Đang lưu...' : 'Lưu'),
+      );
+      return;
+    }
+    if (canEdit()) {
+      footer.append(el('button', { type: 'button', class: 'btn btn-primary', style: 'background: #004482; font-weight: 700;', onClick: startEditing }, 'Sửa'));
+    }
+    footer.append(el('button', { type: 'button', class: 'btn btn-secondary', onClick: closeModal }, 'Đóng'));
+  }
+
+  function startEditing() {
+    if (!canEdit() || isEditing) return;
+    editor = createApplicationEditForm(app, {
+      onBusy: (value) => { isSaving = value; renderFooter(); },
+      onSaved: (updated) => {
+        if (updated && typeof updated === 'object') {
+          app.data = updated.data || app.data;
+          app.applicant_name = updated.applicant_name || app.applicant_name;
+        }
+        isEditing = false;
+        editor = null;
+        onSaved?.(updated);
+        renderTabs();
+        renderContent();
+        renderFooter();
+      },
+    });
+    isEditing = true;
+    renderTabs();
+    renderContent();
+    renderFooter();
   }
 
   function onKeyDown(e) {
@@ -78,8 +134,9 @@ export function openApplicationDetailModal(app) {
 
   renderTabs();
   renderContent();
+  renderFooter();
 
-  modal.append(header, tabNav, tabBody);
+  modal.append(header, tabNav, tabBody, footer);
   overlay.append(modal);
   document.body.append(overlay);
 }
