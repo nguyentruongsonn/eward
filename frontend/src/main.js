@@ -74,6 +74,10 @@ function initApp() {
     '/tai-khoan': renderProfilePage,
     '/profile': renderProfilePage,
     '/can-bo': withStaffLayout((ctx) => {
+      const role = normalizeStaffRole(getStoredUser()?.vaiTro || getStoredUser()?.role);
+      if (role === 'one-stop') {
+        return renderStaffQueuePage(ctx);
+      }
       if (ctx.searchParams?.has('status')) {
         return renderStaffQueuePage(ctx);
       }
