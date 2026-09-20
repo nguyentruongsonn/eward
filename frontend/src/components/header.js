@@ -60,26 +60,20 @@ export function renderHeader({ navigate }) {
         }, 'Bàn làm việc Cán bộ') : null,
         el('button', {
           type: 'button',
-          style: 'width: 100%; text-align: left; padding: 0.5rem 0.85rem; background: transparent; border: none; font-size: 12.5px; color: #334155; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.45rem;',
+          style: 'width: 100%; text-align: left; padding: 0.5rem 0.85rem; background: transparent; border: none; font-size: 12.5px; color: #334155; font-weight: 600; cursor: pointer;',
           onClick: () => {
             dropdownMenu.style.display = 'none';
             navigate('/tai-khoan');
           },
-        }, [
-          el('span', { class: 'material-symbols-outlined', style: 'font-size: 16px; color: #004482;' }, 'person'),
-          el('span', {}, 'Thông tin tài khoản'),
-        ]),
+        }, 'Thông tin tài khoản'),
         el('button', {
           type: 'button',
-          style: 'width: 100%; text-align: left; padding: 0.5rem 0.85rem; background: transparent; border: none; font-size: 12.5px; color: #334155; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.45rem;',
+          style: 'width: 100%; text-align: left; padding: 0.5rem 0.85rem; background: transparent; border: none; font-size: 12.5px; color: #334155; font-weight: 600; cursor: pointer;',
           onClick: () => {
             dropdownMenu.style.display = 'none';
             navigate('/tai-khoan?tab=applications');
           },
-        }, [
-          el('span', { class: 'material-symbols-outlined', style: 'font-size: 16px; color: #004482;' }, 'folder_shared'),
-          el('span', {}, 'Hồ sơ đã nộp'),
-        ]),
+        }, 'Hồ sơ đã nộp'),
         el('div', { style: 'height: 1px; background: #f1f5f9; margin: 0.25rem 0;' }),
         el('button', {
           type: 'button',
