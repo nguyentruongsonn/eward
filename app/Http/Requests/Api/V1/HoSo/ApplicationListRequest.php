@@ -18,6 +18,9 @@ class ApplicationListRequest extends FormRequest
             'ten_dich_vu' => ['nullable', 'string', 'max:255'],
             'ma_ho_so' => ['nullable', 'string', 'max:100'],
             'trang_thai' => ['nullable', 'string', 'max:50'],
+            'date_from' => ['nullable', 'date_format:Y-m-d'],
+            'date_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:date_from'],
+            'sort' => ['nullable', 'in:latest,oldest'],
         ];
     }
 }

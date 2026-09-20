@@ -51,9 +51,19 @@ class ApplicationSubmissionService
             $query->where('maTrangThai', $status);
         }
 
+        if (($dateFrom = trim((string) ($filters['date_from'] ?? ''))) !== '') {
+            $query->whereDate('ngayNop', '>=', $dateFrom);
+        }
+
+        if (($dateTo = trim((string) ($filters['date_to'] ?? ''))) !== '') {
+            $query->whereDate('ngayNop', '<=', $dateTo);
+        }
+
+        $direction = ($filters['sort'] ?? 'latest') === 'oldest' ? 'asc' : 'desc';
+
         return $query
-            ->orderByDesc('ngayTiepNhan')
-            ->orderByDesc('maHSXL')
+            ->orderBy('ngayNop', $direction)
+            ->orderBy('maHSXL', $direction)
             ->paginate(
                 max(1, min($perPage, 100)),
                 ['*'],
