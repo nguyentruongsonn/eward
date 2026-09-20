@@ -3,12 +3,14 @@
 namespace App\Services\Files;
 
 use App\Contracts\Files\FileStorage;
+use App\Enums\HoSoStatus;
 use App\Exceptions\ApiException;
 use App\Models\HoSoXuLy;
 use App\Models\Nguoi;
 use App\Models\TaiLieuNop;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ApplicationDocumentService
 {
@@ -100,5 +102,33 @@ class ApplicationDocumentService
         }
 
         return $storage->storeApplicationFile($file, $application, $documentType, $actor);
+    }
+
+    public function replaceDraftDocument(
+        UploadedFile $file,
+        HoSoXuLy $application,
+        int $documentType,
+        Nguoi $actor,
+        FileStorage $storage,
+    ): TaiLieuNop {
+        return DB::transaction(function () use ($file, $application, $documentType, $actor, $storage): TaiLieuNop {
+            $locked = HoSoXuLy::query()->whereKey($application->getKey())->lockForUpdate()->firstOrFail();
+            if (! in_array((int) $locked->maTrangThai, [HoSoStatus::PendingPayment->value, HoSoStatus::PendingReception->value], true)) {
+                throw new ApiException('Hồ sơ chỉ được chỉnh sửa tài liệu khi đang chờ thanh toán hoặc chờ tiếp nhận.', 'APPLICATION_EDIT_INVALID', 409);
+            }
+
+            $existing = $locked->files()
+                ->where('maGiayTo', $documentType)
+                ->lockForUpdate()
+                ->get();
+            $stored = $this->storeForDocumentType($file, $locked, $documentType, $actor, $storage);
+
+            foreach ($existing as $oldFile) {
+                Storage::disk('local')->delete($oldFile->duongDan);
+                $oldFile->delete();
+            }
+
+            return $stored;
+        });
     }
 }

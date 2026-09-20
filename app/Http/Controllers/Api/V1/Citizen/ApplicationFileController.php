@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Citizen;
 
 use App\Contracts\Files\FileStorage;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\HoSo\UploadCitizenApplicationDocumentRequest;
 use App\Http\Requests\Api\V1\HoSo\UploadSupplementRequest;
 use App\Http\Resources\Api\V1\FileResource;
 use App\Models\HoSoXuLy;
@@ -38,6 +39,21 @@ class ApplicationFileController extends Controller
         );
 
         return ApiResponse::success($files, 'Đã tải tài liệu bổ sung.', 201, $request);
+    }
+
+    public function uploadDraft(UploadCitizenApplicationDocumentRequest $request, string $application): JsonResponse
+    {
+        $item = HoSoXuLy::query()->findOrFail($application);
+        $this->authorize('update', $item);
+        $file = $this->documents->replaceDraftDocument(
+            $request->file('file'),
+            $item,
+            $request->integer('document_type'),
+            $request->user('api'),
+            $this->storage,
+        );
+
+        return ApiResponse::success(new FileResource($file), 'Đã cập nhật tài liệu thành phần hồ sơ.', 201, $request);
     }
 
     public function show(Request $request, string $application, int $file): mixed

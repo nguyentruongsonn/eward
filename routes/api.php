@@ -73,6 +73,7 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('applications/{application}', [CitizenApplicationController::class, 'update']);
         Route::post('applications/{application}/cancel', [CitizenApplicationController::class, 'cancel']);
         Route::post('applications/{application}/rating', [CitizenApplicationController::class, 'rate']);
+        Route::post('applications/{application}/documents', [\App\Http\Controllers\Api\V1\Citizen\ApplicationFileController::class, 'uploadDraft']);
         Route::post('applications/{application}/supplements', [\App\Http\Controllers\Api\V1\Citizen\ApplicationFileController::class, 'supplement']);
         Route::get('applications/{application}/result-files', [CitizenResultFileController::class, 'index'])->name('api.v1.citizen.application.result-files.index');
         Route::get('applications/{application}/result-files/{file}', [CitizenResultFileController::class, 'show'])->name('api.v1.citizen.application.result-files.show');
