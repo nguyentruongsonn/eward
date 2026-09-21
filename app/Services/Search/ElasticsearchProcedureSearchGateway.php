@@ -21,8 +21,17 @@ class ElasticsearchProcedureSearchGateway implements ProcedureSearchGateway
     {
         $indices = $this->client->indices();
         $index = $this->indexName();
+        $normalizedProperties = [
+            'name_normalized' => ['type' => 'search_as_you_type'],
+            'field_name_normalized' => ['type' => 'text'],
+        ];
 
         if ($indices->exists(['index' => $index])->asBool()) {
+            $indices->putMapping([
+                'index' => $index,
+                'body' => ['properties' => $normalizedProperties],
+            ]);
+
             return;
         }
 
@@ -38,6 +47,7 @@ class ElasticsearchProcedureSearchGateway implements ProcedureSearchGateway
                         'id' => ['type' => 'integer'],
                         'code' => ['type' => 'keyword'],
                         'name' => ['type' => 'search_as_you_type'],
+                        ...$normalizedProperties,
                         'field_id' => ['type' => 'integer'],
                         'field_name' => ['type' => 'text'],
                         'is_public' => ['type' => 'boolean'],
