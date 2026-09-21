@@ -4,9 +4,15 @@ namespace App\Providers;
 
 use App\Contracts\Files\FileStorage;
 use App\Contracts\Payments\PaymentGateway;
+use App\Contracts\Search\ApplicationSearchGateway;
+use App\Contracts\Search\ProcedureSearchGateway;
 use App\Services\Files\PrivateFileStorage;
 use App\Services\Payments\PayOSPaymentGateway;
+use App\Services\Search\ElasticsearchApplicationSearchGateway;
+use App\Services\Search\ElasticsearchProcedureSearchGateway;
 use App\Support\AuditLogger;
+use Elastic\Elasticsearch\Client;
+use Elastic\Elasticsearch\ClientBuilder;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -24,6 +30,20 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(FileStorage::class, PrivateFileStorage::class);
         $this->app->bind(PaymentGateway::class, PayOSPaymentGateway::class);
         $this->app->singleton(AuditLogger::class);
+        $this->app->singleton(Client::class, static function (): Client {
+            $builder = ClientBuilder::create()
+                ->setHosts(config('elasticsearch.hosts'))
+                ->setRetries(1);
+
+            $apiKey = config('elasticsearch.api_key');
+            if (is_string($apiKey) && trim($apiKey) !== '') {
+                $builder->setApiKey($apiKey);
+            }
+
+            return $builder->build();
+        });
+        $this->app->bind(ApplicationSearchGateway::class, ElasticsearchApplicationSearchGateway::class);
+        $this->app->bind(ProcedureSearchGateway::class, ElasticsearchProcedureSearchGateway::class);
     }
 
     /**
