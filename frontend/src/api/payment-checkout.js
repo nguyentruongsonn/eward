@@ -1,7 +1,9 @@
+import QRCode from 'qrcode';
+
 export async function createApplicationCheckout(apiClient, applicationId) {
   const intentResponse = await apiClient.post('/payments/intents', {
     application_id: applicationId,
-    provider: 'casso',
+    provider: 'payos',
   }, {
     headers: { 'Idempotency-Key': `application-${applicationId}-payment` },
   });
@@ -12,11 +14,23 @@ export async function createApplicationCheckout(apiClient, applicationId) {
 
   const checkoutResponse = await apiClient.get(`/payments/intents/${intent.id}/checkout`);
   const checkout = checkoutResponse?.data || checkoutResponse;
-  if (!checkout?.qr_url) {
-    throw new Error('Cổng thanh toán chưa trả về mã QR.');
+  if (!checkout?.qr_code && !checkout?.checkout_url) {
+    throw new Error('Cổng thanh toán chưa trả về mã QR hoặc đường dẫn thanh toán.');
   }
 
   return { ...checkout, intent_id: intent.id };
+}
+
+export async function renderPaymentQr(qrCode) {
+  if (!qrCode) {
+    throw new Error('PayOS chưa trả về dữ liệu mã QR.');
+  }
+
+  return QRCode.toDataURL(qrCode, {
+    errorCorrectionLevel: 'M',
+    margin: 2,
+    width: 280,
+  });
 }
 
 export async function getPaymentIntentStatus(apiClient, intentId) {

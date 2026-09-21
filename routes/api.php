@@ -87,7 +87,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('intents/{intent}', [PaymentController::class, 'show']);
         Route::get('intents/{intent}/checkout', [PaymentController::class, 'checkout']);
     });
-    Route::post('payments/webhooks/casso', [PaymentController::class, 'cassoWebhook']);
+    Route::post('payments/webhooks/payos', [PaymentController::class, 'payosWebhook']);
 
     Route::middleware('auth:api')->prefix('citizen')->group(function (): void {
         Route::get('payments', [PaymentController::class, 'index']);

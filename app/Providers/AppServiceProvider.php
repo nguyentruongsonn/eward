@@ -5,7 +5,7 @@ namespace App\Providers;
 use App\Contracts\Files\FileStorage;
 use App\Contracts\Payments\PaymentGateway;
 use App\Services\Files\PrivateFileStorage;
-use App\Services\Payments\CassoPaymentGateway;
+use App\Services\Payments\PayOSPaymentGateway;
 use App\Support\AuditLogger;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -22,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(FileStorage::class, PrivateFileStorage::class);
-        $this->app->bind(PaymentGateway::class, CassoPaymentGateway::class);
+        $this->app->bind(PaymentGateway::class, PayOSPaymentGateway::class);
         $this->app->singleton(AuditLogger::class);
     }
 

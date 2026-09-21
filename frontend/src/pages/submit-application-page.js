@@ -1,6 +1,6 @@
 import { el } from '../components/dom.js';
 import { api, getAuthToken, getStoredUser, setStoredUser } from '../api/client.js';
-import { createApplicationCheckout, pollPaymentIntent } from '../api/payment-checkout.js';
+import { createApplicationCheckout, pollPaymentIntent, renderPaymentQr } from '../api/payment-checkout.js';
 import { openAuthModal } from '../components/auth-modal.js';
 import { createDynamicForm } from '../components/dynamic-form.js';
 import { createSubmissionDossier } from '../components/submission-dossier.js';
@@ -265,7 +265,7 @@ export function renderSubmitApplicationPage({ params, searchParams, navigate }) 
     const reloadButton = el('button', { type: 'button', class: 'btn btn-secondary btn-sm', style: 'border: 1px solid #93c5fd; color: #004482; font-weight: 700;' }, 'Tải lại mã QR');
     let stopPaymentPolling = () => {};
     const paymentSection = el('div', { style: 'margin-bottom: 1.5rem; border: 1px dashed #004482; border-radius: 6px; padding: 1.5rem; background: #f0f7ff; text-align: center;' }, [
-      el('h4', { style: 'font-size: 14px; font-weight: 800; color: #004482; margin: 0 0 1rem; text-transform: uppercase;' }, 'THANH TOÁN TRỰC TUYẾN QUA VIETQR'),
+      el('h4', { style: 'font-size: 14px; font-weight: 800; color: #004482; margin: 0 0 1rem; text-transform: uppercase;' }, 'THANH TOÁN TRỰC TUYẾN QUA PAYOS'),
       qrBody,
       el('p', { style: 'margin: 0.75rem 0 1rem; font-size: 12px; color: #475569; line-height: 1.5;' }, `Số tiền cần thanh toán: ${totalFee.toLocaleString('vi-VN')} VNĐ · Mã hồ sơ: ${code}`),
       reloadButton,
@@ -278,13 +278,15 @@ export function renderSubmitApplicationPage({ params, searchParams, navigate }) 
       qrBody.replaceChildren(el('span', { style: 'font-size: 12.5px; color: #64748b;' }, 'Đang tạo mã QR thanh toán...'));
       try {
         const checkout = await createApplicationCheckout(api, code);
+        const qrDataUrl = await renderPaymentQr(checkout.qr_code);
         qrBody.replaceChildren(
           el('img', {
-            src: checkout.qr_url,
+            src: qrDataUrl,
             alt: `Mã QR thanh toán hồ sơ ${code}`,
             style: 'width: 240px; max-width: 100%; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; padding: 0.35rem;',
           }),
           el('span', { style: 'font-size: 12px; color: #475569;' }, 'Mở ứng dụng ngân hàng để quét mã và hoàn tất thanh toán.'),
+          el('a', { href: checkout.checkout_url, target: '_blank', rel: 'noreferrer', style: 'font-size: 12px; font-weight: 700; color: #004482;' }, 'Mở trang thanh toán PayOS'),
         );
         stopPaymentPolling = pollPaymentIntent(api, checkout.intent_id, {
           onStatus: (status) => {

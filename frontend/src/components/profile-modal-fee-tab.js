@@ -1,6 +1,6 @@
 import { el } from './dom.js';
 import { api } from '../api/client.js';
-import { createApplicationCheckout, pollPaymentIntent } from '../api/payment-checkout.js';
+import { createApplicationCheckout, pollPaymentIntent, renderPaymentQr } from '../api/payment-checkout.js';
 
 export function renderProfileModalFeeTab(app) {
   const rawData = app.data || app.dulieu || {};
@@ -16,7 +16,7 @@ export function renderProfileModalFeeTab(app) {
   const paymentMethodCode = rawData.payment_method || app.payment_status?.method || 'online';
   const paymentMethod = paymentMethodCode === 'direct'
     ? 'Thanh toán trực tiếp tại Bộ phận Một cửa'
-    : 'Thanh toán trực tuyến qua VietQR';
+    : 'Thanh toán trực tuyến qua PayOS';
   const paymentStatusBadge = el('span', {
     style: `font-size: 12.5px; font-weight: 700; padding: 0.25rem 0.65rem; border-radius: 4px; background: ${statusBg}; color: ${statusColor}; border: 1px solid ${statusBg};`,
   }, statusLabel);
@@ -93,7 +93,7 @@ export function renderProfileModalFeeTab(app) {
     class: 'card',
     style: 'border: 1px dashed #004482; border-radius: 6px; padding: 1.5rem; background: #f0f7ff; text-align: center;',
   }, [
-    el('h4', { style: 'font-size: 14px; font-weight: 800; color: #004482; margin: 0 0 1rem; text-transform: uppercase;' }, 'THANH TOÁN TRỰC TUYẾN QUA VIETQR'),
+    el('h4', { style: 'font-size: 14px; font-weight: 800; color: #004482; margin: 0 0 1rem; text-transform: uppercase;' }, 'THANH TOÁN TRỰC TUYẾN QUA PAYOS'),
     qrBody,
     refreshPaymentBtn,
   ]) : null;
@@ -113,13 +113,15 @@ export function renderProfileModalFeeTab(app) {
     refreshPaymentBtn.disabled = true;
     try {
       const checkout = await createApplicationCheckout(api, appId);
+      const qrDataUrl = await renderPaymentQr(checkout.qr_code);
       qrBody.replaceChildren(
         el('img', {
-          src: checkout.qr_url,
+          src: qrDataUrl,
           alt: `Mã QR thanh toán hồ sơ ${appId}`,
           style: 'max-width: 240px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; padding: 0.35rem;',
         }),
         el('span', { style: 'font-size: 12px; color: #475569;' }, `Số tiền: ${Number(checkout.amount || totalFee).toLocaleString('vi-VN')} đ · Mã hồ sơ: ${appId}`),
+        el('a', { href: checkout.checkout_url, target: '_blank', rel: 'noreferrer', style: 'font-size: 12px; font-weight: 700; color: #004482;' }, 'Mở trang thanh toán PayOS'),
       );
       stopPaymentPolling = pollPaymentIntent(api, checkout.intent_id, {
         onStatus: (status) => {

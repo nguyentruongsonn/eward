@@ -15,7 +15,7 @@ class CreatePaymentIntentRequest extends FormRequest
     {
         return [
             'application_id' => ['required', 'string', 'exists:hosoxuly,maHSXL'],
-            'provider' => ['required', 'in:casso'],
+            'provider' => ['required', 'in:payos'],
         ];
     }
 }

@@ -51,6 +51,7 @@ class PaymentService
                 'IDCD' => $application->IDCD,
                 'maHSXL' => $application->getKey(),
                 'provider' => $provider,
+                'provider_order_code' => $provider === 'payos' ? $this->nextPayOSOrderCode() : null,
                 'amount' => (float) $application->lePhi,
                 'status' => PaymentStatus::Pending,
                 'expires_at' => now()->addMinutes(30),
@@ -223,32 +224,16 @@ class PaymentService
         ]);
     }
 
-    public function handleCassoWebhook(array $payload, ?string $signature, ?string $secureToken = null): PaymentIntent
+    public function handlePayOSWebhook(array $payload, ?string $signature = null): PaymentIntent
     {
-        $transaction = $this->gateway->verifyWebhook($payload, $signature, $secureToken);
+        $transaction = $this->gateway->verifyWebhook($payload, $signature);
 
         return DB::transaction(function () use ($transaction): PaymentIntent {
             $intent = PaymentIntent::query()
-                ->where('provider', 'casso')
-                ->where(function ($query) use ($transaction): void {
-                    $query->whereKey($transaction['reference'])
-                        ->orWhere('provider_transaction_id', $transaction['providerId']);
-                })
+                ->where('provider', 'payos')
+                ->where('provider_order_code', (int) $transaction['orderCode'])
                 ->lockForUpdate()
                 ->first();
-
-            if (! $intent) {
-                $reference = strtolower(trim((string) $transaction['reference']));
-                $amount = (float) $transaction['amount'];
-                $intent = PaymentIntent::query()
-                    ->where('provider', 'casso')
-                    ->where('amount', $amount)
-                    ->whereIn('status', [PaymentStatus::Pending->value, PaymentStatus::Paid->value])
-                    ->latest('created_at')
-                    ->lockForUpdate()
-                    ->get()
-                    ->first(fn (PaymentIntent $candidate): bool => str_contains($reference, strtolower((string) $candidate->getKey())));
-            }
 
             if (! $intent) {
                 throw new ApiException('Không tìm thấy payment intent.', 'PAYMENT_INTENT_NOT_FOUND', 404);
@@ -272,14 +257,14 @@ class PaymentService
 
             $intent->status = PaymentStatus::Paid;
             $intent->provider_transaction_id = $transaction['providerId'] ?: $intent->provider_transaction_id;
-            $intent->metadata = ['webhook' => $transaction];
+            $intent->metadata = ['webhook' => $transaction['webhook'] ?? $transaction];
             $intent->save();
 
             LichSuThanhToan::query()->updateOrCreate(
                 ['maGD' => $intent->provider_transaction_id ?: $intent->getKey()],
                 [
                     'soGD' => $intent->provider_transaction_id,
-                    'loaiGD' => 'Casso',
+                    'loaiGD' => 'PayOS',
                     'ngayGD' => now(),
                     'soTien' => $intent->amount,
                     'trangThai' => 'Thành công',
@@ -291,5 +276,17 @@ class PaymentService
 
             return $intent->fresh();
         });
+    }
+
+    private function nextPayOSOrderCode(): int
+    {
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $code = random_int(100000000, 2000000000);
+            if (! PaymentIntent::query()->where('provider_order_code', $code)->exists()) {
+                return $code;
+            }
+        }
+
+        throw new ApiException('Không thể tạo mã đơn PayOS duy nhất.', 'PAYMENT_ORDER_CODE_UNAVAILABLE', 503);
     }
 }

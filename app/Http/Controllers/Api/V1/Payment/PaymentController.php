@@ -102,12 +102,11 @@ class PaymentController extends Controller
         return ApiResponse::success($this->payments->checkout($item), 'Thông tin thanh toán.', 200, $request);
     }
 
-    public function cassoWebhook(Request $request): JsonResponse
+    public function payosWebhook(Request $request): JsonResponse
     {
-        $intent = $this->payments->handleCassoWebhook(
+        $intent = $this->payments->handlePayOSWebhook(
             $request->all(),
-            $request->header('X-Casso-Signature') ?: $request->header('X-API-KEY'),
-            $request->header('secure-token'),
+            $request->input('signature'),
         );
 
         return ApiResponse::success(['payment_intent_id' => $intent->getKey(), 'status' => $intent->status->value], 'Webhook đã được xử lý.', 200, $request);

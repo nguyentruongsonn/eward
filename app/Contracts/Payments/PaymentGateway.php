@@ -8,5 +8,5 @@ interface PaymentGateway
 {
     public function createCheckout(PaymentIntent $intent): array;
 
-    public function verifyWebhook(array $payload, ?string $signature, ?string $secureToken = null): array;
+    public function verifyWebhook(array $payload, ?string $signature = null): array;
 }
