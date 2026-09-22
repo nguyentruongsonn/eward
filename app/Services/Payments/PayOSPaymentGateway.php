@@ -20,13 +20,12 @@ class PayOSPaymentGateway implements PaymentGateway
         }
 
         $amount = (int) round((float) $intent->amount);
-        $baseUrl = rtrim((string) config('app.url'), '/');
         $payload = [
             'orderCode' => $orderCode,
             'amount' => $amount,
             'description' => 'EWARD '.$orderCode,
-            'cancelUrl' => $baseUrl.'/?payment=cancelled',
-            'returnUrl' => $baseUrl.'/?payment=success',
+            'cancelUrl' => (string) config('services.payos.cancel_url'),
+            'returnUrl' => (string) config('services.payos.return_url'),
             'items' => [[
                 'name' => 'Lệ phí hồ sơ '.$intent->maHSXL,
                 'quantity' => 1,

@@ -40,6 +40,8 @@ return [
         'api_key' => env('PAYOS_API_KEY'),
         'checksum_key' => env('PAYOS_CHECKSUM_KEY'),
         'api_url' => env('PAYOS_API_URL', 'https://api-merchant.payos.vn'),
+        'return_url' => env('PAYOS_RETURN_URL') ?: rtrim((string) env('APP_URL', 'http://localhost'), '/').'/?payment=success',
+        'cancel_url' => env('PAYOS_CANCEL_URL') ?: rtrim((string) env('APP_URL', 'http://localhost'), '/').'/?payment=cancelled',
     ],
 
     'groq' => [
