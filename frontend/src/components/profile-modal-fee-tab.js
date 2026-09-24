@@ -1,6 +1,6 @@
 import { el } from './dom.js';
 import { api } from '../api/client.js';
-import { createApplicationCheckout, pollPaymentIntent, renderPaymentQr } from '../api/payment-checkout.js';
+import { createApplicationCheckout, redirectToPaymentCheckout } from '../api/payment-checkout.js';
 
 export function renderProfileModalFeeTab(app) {
   const rawData = app.data || app.dulieu || {};
@@ -79,22 +79,21 @@ export function renderProfileModalFeeTab(app) {
     ]),
   ]);
 
-  const qrBody = el('div', {
+  const paymentBody = el('div', {
     style: 'display: flex; flex-direction: column; align-items: center; gap: 0.75rem; min-height: 90px; justify-content: center;',
-  }, 'Đang tạo mã QR thanh toán...');
+  }, 'Đang mở trang thanh toán PayOS...');
   const refreshPaymentBtn = el('button', {
     type: 'button',
     class: 'btn btn-secondary btn-sm',
     style: 'border: 1px solid #93c5fd; color: #004482; font-weight: 700;',
-  }, 'Kiểm tra lại thanh toán');
-  let stopPaymentPolling = () => {};
+  }, 'Mở lại trang thanh toán');
 
   const qrSection = (!isPaid && !isFree && paymentMethodCode !== 'direct') ? el('div', {
     class: 'card',
     style: 'border: 1px dashed #004482; border-radius: 6px; padding: 1.5rem; background: #f0f7ff; text-align: center;',
   }, [
     el('h4', { style: 'font-size: 14px; font-weight: 800; color: #004482; margin: 0 0 1rem; text-transform: uppercase;' }, 'THANH TOÁN TRỰC TUYẾN QUA PAYOS'),
-    qrBody,
+    paymentBody,
     refreshPaymentBtn,
   ]) : null;
 
@@ -108,43 +107,14 @@ export function renderProfileModalFeeTab(app) {
 
   async function loadCheckout() {
     if (!qrSection) return;
-    stopPaymentPolling();
-    qrBody.replaceChildren(el('span', { style: 'font-size: 12.5px; color: #64748b;' }, 'Đang tạo mã QR thanh toán...'));
+    paymentBody.replaceChildren(el('span', { style: 'font-size: 12.5px; color: #64748b;' }, 'Đang mở trang thanh toán PayOS...'));
     refreshPaymentBtn.disabled = true;
     try {
       const checkout = await createApplicationCheckout(api, appId);
-      const qrDataUrl = await renderPaymentQr(checkout.qr_code);
-      qrBody.replaceChildren(
-        el('img', {
-          src: qrDataUrl,
-          alt: `Mã QR thanh toán hồ sơ ${appId}`,
-          style: 'max-width: 240px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; padding: 0.35rem;',
-        }),
-        el('span', { style: 'font-size: 12px; color: #475569;' }, `Số tiền: ${Number(checkout.amount || totalFee).toLocaleString('vi-VN')} đ · Mã hồ sơ: ${appId}`),
-        el('a', { href: checkout.checkout_url, target: '_blank', rel: 'noreferrer', style: 'font-size: 12px; font-weight: 700; color: #004482;' }, 'Mở trang thanh toán PayOS'),
-      );
-      stopPaymentPolling = pollPaymentIntent(api, checkout.intent_id, {
-        onStatus: (status) => {
-          if (status?.status === 'paid') {
-            stopPaymentPolling();
-            qrSection.style.background = '#f0fdf4';
-            qrSection.style.borderColor = '#86efac';
-            paymentStatusBadge.textContent = 'Đã thu lệ phí / Có biên lai';
-            paymentStatusBadge.style.background = '#dcfce7';
-            paymentStatusBadge.style.color = '#15803d';
-            paymentStatusBadge.style.borderColor = '#dcfce7';
-            qrBody.replaceChildren(
-              el('strong', { style: 'color: #166534; font-size: 15px;' }, '✓ Đã thanh toán thành công'),
-              el('span', { style: 'font-size: 12px; color: #166534;' }, 'Hồ sơ đã đủ điều kiện vào hàng chờ tiếp nhận.'),
-            );
-            refreshPaymentBtn.disabled = true;
-            refreshPaymentBtn.textContent = 'Đã thanh toán';
-          }
-        },
-      });
+      redirectToPaymentCheckout(checkout);
     } catch (error) {
-      qrBody.replaceChildren(
-        el('span', { style: 'font-size: 12.5px; color: #b91c1c; font-weight: 700;' }, error.message || 'Không thể tạo mã QR.'),
+      paymentBody.replaceChildren(
+        el('span', { style: 'font-size: 12.5px; color: #b91c1c; font-weight: 700;' }, error.message || 'Không thể mở trang thanh toán PayOS.'),
       );
     } finally {
       refreshPaymentBtn.disabled = false;
