@@ -20,6 +20,7 @@ import { renderAdminStaffPage } from './pages/admin-staff-page.js';
 import { renderAdminUsersPage } from './pages/admin-users-page.js';
 import { renderAdminFieldsPage } from './pages/admin-fields-page.js';
 import { renderProfilePage } from './pages/profile-page.js';
+import { renderPaymentReturnPage } from './pages/payment-return-page.js';
 
 import { getStoredUser, getAuthToken } from './api/client.js';
 import { normalizeStaffRole } from './components/staff-nav.js';
@@ -56,8 +57,14 @@ function initApp() {
   const footer = renderFooter();
   const chatAi = renderChatAiWidget();
 
+  const renderRootPage = (ctx) => (
+    ctx.searchParams?.has('payment')
+      ? renderPaymentReturnPage(ctx)
+      : renderHomePage(ctx)
+  );
+
   const router = new Router({
-    '/': renderHomePage,
+    '/': renderRootPage,
     '/thu-tuc': renderProceduresPage,
     '/thu-tuc/:id': renderProcedureDetailPage,
     '/nop-ho-so': renderSubmitApplicationPage,

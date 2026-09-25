@@ -84,6 +84,7 @@ Route::prefix('v1')->group(function (): void {
 
     Route::middleware('auth:api')->prefix('payments')->group(function (): void {
         Route::post('intents', [PaymentController::class, 'store']);
+        Route::get('sync', [PaymentController::class, 'sync']);
         Route::get('intents/{intent}', [PaymentController::class, 'show']);
         Route::get('intents/{intent}/checkout', [PaymentController::class, 'checkout']);
     });

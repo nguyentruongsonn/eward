@@ -68,6 +68,52 @@ class PaymentService
         return $this->gateway->createCheckout($intent);
     }
 
+    public function syncPayOSPayment(Nguoi $user, int $orderCode): PaymentIntent
+    {
+        if ($orderCode <= 0) {
+            throw new ApiException('Mã đơn PayOS không hợp lệ.', 'PAYMENT_ORDER_CODE_INVALID', 422);
+        }
+
+        $payment = $this->gateway->getPaymentStatus($orderCode);
+        $intent = PaymentIntent::query()
+            ->where('provider', 'payos')
+            ->where('provider_order_code', $orderCode)
+            ->whereIn('IDCD', $user->congDan()->select('IDCD'))
+            ->first();
+
+        if (! $intent) {
+            throw new ApiException('Không tìm thấy payment intent.', 'PAYMENT_INTENT_NOT_FOUND', 404);
+        }
+
+        if (strtoupper((string) ($payment['status'] ?? '')) !== 'PAID') {
+            return $intent->fresh();
+        }
+
+        $amount = (int) ($payment['amountPaid'] ?? 0);
+        if ($amount <= 0) {
+            $amount = (int) ($payment['amount'] ?? 0);
+        }
+
+        return DB::transaction(function () use ($intent, $payment, $amount): PaymentIntent {
+            $locked = PaymentIntent::query()->whereKey($intent->getKey())->lockForUpdate()->firstOrFail();
+            $receivedCents = (int) round($amount * 100);
+            $expectedCents = (int) round((float) $locked->amount * 100);
+            if ($receivedCents !== $expectedCents) {
+                throw new ApiException('Số tiền thanh toán không khớp.', 'PAYMENT_AMOUNT_MISMATCH', 409);
+            }
+
+            if ($locked->status === PaymentStatus::Paid) {
+                return $locked->fresh();
+            }
+
+            if ($locked->status !== PaymentStatus::Pending || ($locked->expires_at && $locked->expires_at->isPast())) {
+                throw new ApiException('Payment intent không còn ở trạng thái có thể thanh toán.', 'PAYMENT_INTENT_NOT_PAYABLE', 409);
+            }
+
+            return $this->settlePaidIntent($locked, (string) ($payment['providerId'] ?? $locked->provider_order_code), ['sync' => $payment]);
+        });
+    }
+
     public function confirmCounterPayment(Nguoi $actor, string $applicationId, float $amount, string $receiptNumber, ?string $note = null): PaymentIntent
     {
         return DB::transaction(function () use ($actor, $applicationId, $amount, $receiptNumber, $note): PaymentIntent {
@@ -244,38 +290,43 @@ class PaymentService
                 throw new ApiException('Số tiền thanh toán không khớp.', 'PAYMENT_AMOUNT_MISMATCH', 409);
             }
 
+            if ($intent->status === PaymentStatus::Paid && $intent->provider_transaction_id === $transaction['providerId']) {
+                return $intent->fresh();
+            }
             if ($intent->status === PaymentStatus::Paid) {
-                if ($intent->provider_transaction_id === $transaction['providerId']) {
-                    return $intent->fresh();
-                }
-
                 throw new ApiException('Payment intent đã được tất toán bằng giao dịch khác.', 'PAYMENT_ALREADY_SETTLED', 409);
             }
             if ($intent->status !== PaymentStatus::Pending || ($intent->expires_at && $intent->expires_at->isPast())) {
                 throw new ApiException('Payment intent không còn ở trạng thái có thể thanh toán.', 'PAYMENT_INTENT_NOT_PAYABLE', 409);
             }
 
-            $intent->status = PaymentStatus::Paid;
-            $intent->provider_transaction_id = $transaction['providerId'] ?: $intent->provider_transaction_id;
-            $intent->metadata = ['webhook' => $transaction['webhook'] ?? $transaction];
-            $intent->save();
-
-            LichSuThanhToan::query()->updateOrCreate(
-                ['maGD' => $intent->provider_transaction_id ?: $intent->getKey()],
-                [
-                    'soGD' => $intent->provider_transaction_id,
-                    'loaiGD' => 'PayOS',
-                    'ngayGD' => now(),
-                    'soTien' => $intent->amount,
-                    'trangThai' => 'Thành công',
-                    'IDCD' => $intent->IDCD,
-                    'maHSXL' => $intent->maHSXL,
-                    'moTa' => 'Webhook thanh toán đã xác thực',
-                ],
-            );
-
-            return $intent->fresh();
+            return $this->settlePaidIntent($intent, (string) $transaction['providerId'], ['webhook' => $transaction['webhook'] ?? $transaction]);
         });
+    }
+
+    /** @param array<string, mixed> $metadata */
+    private function settlePaidIntent(PaymentIntent $intent, string $providerTransactionId, array $metadata): PaymentIntent
+    {
+        $intent->status = PaymentStatus::Paid;
+        $intent->provider_transaction_id = $providerTransactionId ?: $intent->provider_transaction_id;
+        $intent->metadata = $metadata;
+        $intent->save();
+
+        LichSuThanhToan::query()->updateOrCreate(
+            ['maGD' => $intent->provider_transaction_id ?: $intent->getKey()],
+            [
+                'soGD' => $intent->provider_transaction_id,
+                'loaiGD' => 'PayOS',
+                'ngayGD' => now(),
+                'soTien' => $intent->amount,
+                'trangThai' => 'Thành công',
+                'IDCD' => $intent->IDCD,
+                'maHSXL' => $intent->maHSXL,
+                'moTa' => 'Thanh toán PayOS đã được xác thực',
+            ],
+        );
+
+        return $intent->fresh();
     }
 
     private function nextPayOSOrderCode(): int

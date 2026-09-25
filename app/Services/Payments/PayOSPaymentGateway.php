@@ -61,6 +61,38 @@ class PayOSPaymentGateway implements PaymentGateway
         ];
     }
 
+    public function getPaymentStatus(int $orderCode): array
+    {
+        if ($orderCode <= 0) {
+            throw new ApiException('Mã đơn PayOS không hợp lệ.', 'PAYMENT_ORDER_CODE_INVALID', 422);
+        }
+
+        try {
+            $response = $this->client()->paymentRequests->get($orderCode, ['asArray' => true]);
+        } catch (ApiException $error) {
+            throw $error;
+        } catch (Throwable $error) {
+            report($error);
+            throw new ApiException('Không thể kiểm tra trạng thái thanh toán PayOS.', 'PAYMENT_PROVIDER_UNAVAILABLE', 502);
+        }
+
+        $response = is_array($response) ? $response : get_object_vars($response);
+        $transactions = $response['transactions'] ?? [];
+        $latestTransaction = [];
+        if (is_array($transactions) && $transactions !== []) {
+            $latestTransaction = (array) end($transactions);
+        }
+
+        return [
+            'orderCode' => (int) ($response['orderCode'] ?? $orderCode),
+            'status' => strtoupper((string) ($response['status'] ?? '')),
+            'amount' => (int) ($response['amount'] ?? 0),
+            'amountPaid' => (int) ($response['amountPaid'] ?? 0),
+            'providerId' => (string) ($latestTransaction['reference'] ?? $latestTransaction['transactionId'] ?? $response['paymentLinkId'] ?? $response['id'] ?? ''),
+            'payment' => $response,
+        ];
+    }
+
     public function verifyWebhook(array $payload, ?string $signature = null): array
     {
         if (($payload['signature'] ?? null) === null && $signature !== null) {
