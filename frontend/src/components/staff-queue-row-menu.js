@@ -109,7 +109,7 @@ export function createRowActionMenu(item, navigate, onRefresh, isNearBottom = fa
     const fee = itemFee;
     const isPaid = itemIsPaid;
     items = [];
-    if ((sid === 1 || sid === 11) && fee > 0 && !isPaid) {
+    if ((sid === 13 || sid === 11) && fee > 0 && !isPaid) {
       items.push(createMenuItem('Xác nhận thu trực tiếp', '#b45309', () => {
         openStaffCounterPaymentModal({ application: item, onSubmitted: onRefresh });
       }));
@@ -171,7 +171,7 @@ export function createRowActionMenu(item, navigate, onRefresh, isNearBottom = fa
       createMenuItem('Xem lịch sử cập nhật', '#334155', () => navigate(`/can-bo/ho-so/${item.id}#audit`)),
       createMenuItem('Tải văn bản hồ sơ', '#334155', () => navigate(`/can-bo/ho-so/${item.id}?tab=dossier`)),
     ];
-    if ((sid === 1 || sid === 11) && itemFee > 0 && !itemIsPaid) {
+    if ((sid === 13 || sid === 11) && itemFee > 0 && !itemIsPaid) {
       items.unshift(createMenuItem('Xác nhận thu trực tiếp', '#b45309', () => {
         openStaffCounterPaymentModal({ application: item, onSubmitted: onRefresh });
       }));

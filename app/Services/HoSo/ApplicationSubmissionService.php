@@ -91,6 +91,9 @@ class ApplicationSubmissionService
                 $fees = $this->calculateFees((int) $procedure->getKey(), $data['fee_items'] ?? []);
                 $formId = DB::table('formtructuyen')->where('maTTHC', $procedure->getKey())->value('maForm');
                 $paymentMethod = $data['payment_method'] ?? 'online';
+                $initialStatus = (float) $fees['total'] > 0
+                    ? HoSoStatus::PendingPayment
+                    : HoSoStatus::PendingReception;
 
                 return HoSoXuLy::create([
                     'maTTHC' => $procedure->getKey(),
@@ -105,7 +108,7 @@ class ApplicationSubmissionService
                         'fee_items' => $fees['items'],
                         'payment_method' => $paymentMethod,
                     ],
-                    'maTrangThai' => HoSoStatus::PendingReception->value,
+                    'maTrangThai' => $initialStatus->value,
                     'lePhi' => $fees['total'],
                     'hinhThuc' => $data['delivery_method'] === 'direct' ? 'Nhận trực tiếp' : 'Nhận trực tuyến',
                     'donViXuLy' => $procedure->coQuanThucHien ?: 'Bộ phận Một cửa',

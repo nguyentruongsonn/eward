@@ -60,7 +60,9 @@ export function renderWorkflowSteps(app) {
 
   let activeStep = 1;
   let activeStepName = 'Cán bộ một cửa tiếp nhận';
-  if (sid === 2 || sid === 5 || sid === 6) {
+  if (sid === 13) {
+    activeStepName = 'Chờ thanh toán';
+  } else if (sid === 2 || sid === 5 || sid === 6) {
     activeStep = 2;
     activeStepName = sid === 5 ? 'Yêu cầu bổ sung' : (sid === 6 ? 'Tiếp tục xử lý sau bổ sung' : 'Chuyên viên thụ lý');
   } else if (sid === 12) {
@@ -101,10 +103,10 @@ export function renderWorkflowSteps(app) {
       duration: '8 giờ làm việc',
       officer: receiver,
       received: formatDt(t1Rec),
-      transferred: t1Chuyen ? formatDt(t1Chuyen) : 'Chưa chuyển (Đang tiếp nhận)',
+      transferred: sid === 13 ? 'Chưa thanh toán lệ phí' : (t1Chuyen ? formatDt(t1Chuyen) : 'Chưa chuyển (Đang tiếp nhận)'),
       due: formatDt(dueDate),
       isCurrent: activeStep === 1,
-      statusBadge: 'Đang thực hiện',
+      statusBadge: sid === 13 ? 'Chờ thanh toán' : 'Đang thực hiện',
     },
     {
       num: 2,

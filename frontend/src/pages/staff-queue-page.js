@@ -41,6 +41,7 @@ export function renderStaffQueuePage({ navigate, searchParams }) {
 
   const statusOptions = [
     { value: '', label: 'Tất cả trạng thái' },
+    { value: '13', label: 'Chờ thanh toán' },
     { value: '1', label: 'Chờ tiếp nhận' },
     { value: '2', label: 'Đang thụ lý' },
     { value: '4', label: 'Chờ phê duyệt' },
@@ -140,8 +141,9 @@ export function renderStaffQueuePage({ navigate, searchParams }) {
     if (hasSup && id !== 9 && id !== 10) {
       return el('span', { style: 'font-size: 11px; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 3px; background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; white-space: nowrap;' }, 'Đã bổ sung');
     }
-    const label = (id === 12) ? 'Yêu cầu xử lý lại' : (id === 4 ? 'Chờ phê duyệt' : (id === 2 ? 'Đang thụ lý' : (st?.label || st?.name || 'Chờ tiếp nhận')));
-    const s = id === 1 ? ['#f8fafc', '#475569', '#cbd5e1']
+    const label = (id === 13) ? 'Chờ thanh toán' : ((id === 12) ? 'Yêu cầu xử lý lại' : (id === 4 ? 'Chờ phê duyệt' : (id === 2 ? 'Đang thụ lý' : (st?.label || st?.name || 'Chờ tiếp nhận'))));
+    const s = id === 13 ? ['#fff7ed', '#c2410c', '#ffedd5']
+      : id === 1 ? ['#f8fafc', '#475569', '#cbd5e1']
       : id === 2 ? ['#f0f7ff', '#0369a1', '#bae6fd']
       : id === 4 ? ['#eff6ff', '#1d4ed8', '#bfdbfe']
       : id === 5 ? ['#fffbeb', '#b45309', '#fed7aa']

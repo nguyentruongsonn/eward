@@ -16,6 +16,7 @@ enum HoSoStatus: int
     case Delivered = 10;
     case DirectReception = 11;
     case ReworkRequested = 12;
+    case PendingPayment = 13;
 
     public function label(): string
     {
@@ -32,6 +33,7 @@ enum HoSoStatus: int
             self::Delivered => 'Đã trả kết quả',
             self::DirectReception => 'Nhận trực tiếp',
             self::ReworkRequested => 'Yêu cầu xử lý lại',
+            self::PendingPayment => 'Chờ thanh toán',
         };
     }
 
@@ -47,6 +49,7 @@ enum HoSoStatus: int
             self::Completed => [self::Delivered->value, self::ReworkRequested->value],
             self::Rejected, self::Suspended, self::Delivered => [],
             self::WithdrawalRequested => [self::Suspended->value],
+            self::PendingPayment => [self::WithdrawalRequested->value],
         };
     }
 }

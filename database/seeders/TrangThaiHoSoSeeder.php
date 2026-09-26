@@ -62,6 +62,10 @@ class TrangThaiHoSoSeeder extends Seeder
                 'maTrangThai' => 12,
                 'tenTrangThai' => 'Yêu cầu xử lý lại',
             ],
+            [
+                'maTrangThai' => 13,
+                'tenTrangThai' => 'Chờ thanh toán',
+            ],
         ]);
     }
 }

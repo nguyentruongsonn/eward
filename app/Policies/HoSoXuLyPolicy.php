@@ -33,7 +33,8 @@ class HoSoXuLyPolicy
 
     public function update(Nguoi $user, HoSoXuLy $application): bool
     {
-        return $this->owns($user, $application) && $application->maTrangThai === 1;
+        return $this->owns($user, $application)
+            && in_array((int) $application->maTrangThai, [HoSoStatus::PendingPayment->value, HoSoStatus::PendingReception->value], true);
     }
 
     public function cancel(Nguoi $user, HoSoXuLy $application): bool

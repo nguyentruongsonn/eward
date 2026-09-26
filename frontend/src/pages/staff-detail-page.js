@@ -18,6 +18,7 @@ function remaining(dueAt, sid) {
 }
 
 const STATUS_STYLE = {
+  13: { bg: '#fff7ed', color: '#c2410c', border: '#ffedd5', label: 'Chờ thanh toán' },
   1: { bg: '#f8fafc', color: '#475569', border: '#cbd5e1', label: 'Chờ tiếp nhận' },
   2: { bg: '#f0f7ff', color: '#0369a1', border: '#bae6fd', label: 'Đang thụ lý' },
   3: { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca', label: 'Từ chối tiếp nhận' },
@@ -191,4 +192,3 @@ export function renderStaffDetailPage({ params, navigate }) {
   container.append(contentArea);
   return container;
 }
-
