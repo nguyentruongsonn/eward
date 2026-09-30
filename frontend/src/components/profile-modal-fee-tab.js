@@ -25,55 +25,87 @@ function formatVnd(amount) {
 
 function statusBadge(label, tone) {
   const styles = {
-    neutral: ['#f8fafc', '#475569', '#cbd5e1'],
+    neutral: ['#f1f5f9', '#475569', '#cbd5e1'],
     warning: ['#fff7ed', '#c2410c', '#fed7aa'],
     success: ['#f0fdf4', '#15803d', '#bbf7d0'],
-  }[tone] || ['#f8fafc', '#475569', '#cbd5e1'];
+  }[tone] || ['#f1f5f9', '#475569', '#cbd5e1'];
+
   return el('span', {
-    style: `display: inline-flex; align-items: center; min-height: 27px; padding: 0 0.65rem; border: 1px solid ${styles[2]}; border-radius: 3px; background: ${styles[0]}; color: ${styles[1]}; font-size: 12px; font-weight: 700;`,
+    style: `display: inline-flex; align-items: center; min-height: 27px; padding: 0 0.65rem; border: 1px solid ${styles[2]}; border-radius: 4px; background: ${styles[0]}; color: ${styles[1]}; font-size: 12px; font-weight: 700;`,
   }, label);
 }
 
-function summaryRow(label, value, valueStyle = '') {
-  return el('div', { style: 'display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; padding: 0.72rem 0; border-bottom: 1px solid #e5e7eb;' }, [
-    el('span', { style: 'color: #64748b; font-size: 12px;' }, label),
-    el('span', { style: `max-width: 62%; text-align: right; color: #1e293b; font-size: 12px; font-weight: 700; line-height: 1.45; ${valueStyle}` }, value),
+function summaryField(label, value, valueStyle = '') {
+  return el('div', { style: 'display: flex; flex-direction: column; gap: 0.3rem;' }, [
+    el('label', { style: 'font-size: 12px; font-weight: 600; color: #334155;' }, label),
+    el('div', {
+      style: `min-height: 38px; box-sizing: border-box; display: flex; align-items: center; padding: 0.5rem 0.75rem; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; color: #0f172a; font-size: 13px; font-weight: 600; line-height: 1.4; ${valueStyle}`,
+    }, value),
   ]);
 }
 
-function renderPaymentAction({ appId, totalFee, onPay }) {
+function renderPaymentPanel({ appId, totalFee, type, onPay, transactionCode }) {
+  const isOnline = type === 'online';
+  const isDirect = type === 'direct';
   const message = el('div', {
-    style: 'display: none; margin-top: 0.75rem; padding: 0.6rem 0.7rem; border: 1px solid #fecaca; background: #fff7f7; color: #b91c1c; font-size: 12px; line-height: 1.45;',
+    style: 'display: none; margin-top: 0.75rem; padding: 0.6rem 0.7rem; border: 1px solid #fecaca; border-radius: 4px; background: #fff7f7; color: #b91c1c; font-size: 12px; line-height: 1.45;',
   });
-  const button = el('button', {
-    type: 'button',
-    class: 'btn btn-primary btn-sm',
-    style: 'min-height: 38px; padding: 0 1rem; border: 1px solid #004482; background: #004482; color: #ffffff; font-size: 12.5px; font-weight: 700; white-space: nowrap;',
-    onClick: async () => {
-      button.disabled = true;
-      button.textContent = 'Đang kết nối PayOS...';
-      message.style.display = 'none';
-      try {
-        await onPay();
-      } catch (error) {
-        message.textContent = error.message || 'Không thể mở trang thanh toán PayOS.';
-        message.style.display = 'block';
-        button.disabled = false;
-        button.textContent = 'Thanh toán qua PayOS';
-      }
-    },
-  }, 'Thanh toán qua PayOS');
 
-  return el('div', { style: 'margin-top: 0.85rem; padding-top: 0.9rem; border-top: 1px solid #e5e7eb;' }, [
-    el('div', { style: 'display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;' }, [
+  const panelTone = isOnline
+    ? 'background: #eff6ff; border: 1px solid #bfdbfe; border-left: 3px solid #0b5cab;'
+    : (isDirect
+      ? 'background: #fffbeb; border: 1px solid #fde68a; border-left: 3px solid #b45309;'
+      : 'background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 3px solid #15803d;');
+  const titleColor = isOnline ? '#0f3f70' : (isDirect ? '#92400e' : '#166534');
+  const title = isOnline ? 'Thanh toán trực tuyến' : (isDirect ? 'Thanh toán tại Bộ phận Một cửa' : 'Thanh toán đã được ghi nhận');
+  const note = isOnline
+    ? 'Bạn sẽ được chuyển sang cổng PayOS để hoàn tất giao dịch.'
+    : (isDirect
+      ? 'Công dân mang mã hồ sơ đến quầy. Hồ sơ chuyển sang chờ tiếp nhận sau khi cán bộ xác nhận thu tiền.'
+      : (transactionCode ? `Mã giao dịch: ${transactionCode}` : 'Khoản thu đã được ghi nhận.'));
+
+  let action = null;
+  if (isOnline) {
+    const button = el('button', {
+      type: 'button',
+      class: 'btn btn-primary btn-sm',
+      style: 'min-height: 38px; padding: 0 1rem; font-size: 12.5px; font-weight: 700; white-space: nowrap;',
+      onClick: async () => {
+        button.disabled = true;
+        button.textContent = 'Đang kết nối PayOS...';
+        message.style.display = 'none';
+        try {
+          await onPay();
+        } catch (error) {
+          message.textContent = error.message || 'Không thể mở trang thanh toán PayOS.';
+          message.style.display = 'block';
+          button.disabled = false;
+          button.textContent = 'Thanh toán qua PayOS';
+        }
+      },
+    }, 'Thanh toán qua PayOS');
+    action = button;
+  }
+
+  return el('div', {
+    style: `width: min(100%, 760px); align-self: flex-end; box-sizing: border-box; padding: 1rem 1.25rem; border-radius: 6px; ${panelTone}`,
+  }, [
+    el('div', { style: 'display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap;' }, [
       el('div', {}, [
-        el('div', { style: 'font-size: 11px; color: #64748b;' }, `Mã hồ sơ: ${appId}`),
-        el('strong', { style: 'display: block; margin-top: 0.15rem; color: #0f3f70; font-size: 19px;' }, formatVnd(totalFee)),
+        el('div', { style: `font-size: 13px; font-weight: 800; color: ${titleColor};` }, title),
+        el('div', { style: `margin-top: 0.3rem; color: ${titleColor}; opacity: 0.9; font-size: 12px; line-height: 1.5;` }, note),
       ]),
-      button,
+      isOnline ? el('span', { style: 'padding: 0.2rem 0.5rem; border: 1px solid #bfdbfe; border-radius: 4px; background: #ffffff; color: #1d4ed8; font-size: 11px; font-weight: 800;' }, 'PayOS') : null,
+    ]),
+    el('div', { style: 'display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 0.9rem; padding-top: 0.8rem; border-top: 1px solid rgba(148, 163, 184, 0.28);' }, [
+      el('div', {}, [
+        el('div', { style: `font-size: 11px; color: ${titleColor}; opacity: 0.85;` }, `Mã hồ sơ: ${appId}`),
+        el('strong', { style: `display: block; margin-top: 0.15rem; color: ${titleColor}; font-size: 17px;` }, formatVnd(totalFee)),
+      ]),
+      action,
     ]),
     message,
-  ]);
+  ].filter(Boolean));
 }
 
 export function renderProfileModalFeeTab(app) {
@@ -84,92 +116,72 @@ export function renderProfileModalFeeTab(app) {
     ? 'Thanh toán trực tiếp tại Bộ phận Một cửa'
     : 'Thanh toán trực tuyến qua PayOS';
   const transactionCode = app.payment_status?.transaction_code;
+  const container = el('div', { style: 'display: flex; flex-direction: column; gap: 1.25rem;' });
 
-  const container = el('div', { style: 'display: flex; flex-direction: column; gap: 1rem; max-width: 1080px; margin: 0 auto;' });
-  const pageIntro = el('div', { style: 'display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; padding-bottom: 0.2rem;' }, [
-    el('div', {}, [
-      el('div', { style: 'font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;' }, 'Thông tin tài chính của hồ sơ'),
-      el('h3', { style: 'margin: 0.25rem 0 0; color: #0f3f70; font-size: 16px; font-weight: 800;' }, 'Phí và lệ phí'),
+  const status = isFree
+    ? statusBadge('Miễn phí', 'neutral')
+    : (isPaid ? statusBadge('Đã thanh toán', 'success') : statusBadge('Chưa thanh toán', 'warning'));
+  const summaryCard = el('div', { class: 'card', style: 'padding: 1.5rem; background: #ffffff; border: 1px solid #d0d7de; border-radius: 6px;' }, [
+    el('div', { style: 'display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.25rem;' }, [
+      el('span', { style: 'display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; background: #e0f2fe; color: #0284c7; font-weight: 700; font-size: 12px; border-radius: 3px;' }, '1'),
+      el('span', { style: 'font-size: 14px; font-weight: 700; color: #004b87;' }, 'Thông tin thanh toán'),
     ]),
-    el('span', { style: 'color: #64748b; font-size: 12px;' }, `Mã hồ sơ: ${appId}`),
+    el('div', { style: 'display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.85rem;' }, [
+      summaryField('Mã hồ sơ', appId),
+      summaryField('Phương thức', paymentMethod),
+      summaryField('Tổng số tiền', isFree ? 'Miễn phí' : formatVnd(totalFee), 'color: #004b87;'),
+      summaryField('Trạng thái', status),
+    ]),
   ]);
 
-  const feeRows = feeItems.length > 0 ? feeItems.map((fee, index) => el('tr', { style: 'border-bottom: 1px solid #edf1f5;' }, [
-    el('td', { style: 'padding: 0.72rem 0.75rem; width: 42px; text-align: center; color: #64748b;' }, String(index + 1)),
-    el('td', { style: 'padding: 0.72rem 0.75rem; color: #1e293b; font-weight: 600;' }, fee.name || `Khoản phí #${fee.id}`),
-    el('td', { style: 'padding: 0.72rem 0.75rem; width: 72px; text-align: center; color: #475569;' }, String(fee.quantity || 1)),
-    el('td', { style: 'padding: 0.72rem 0.75rem; width: 125px; text-align: right; color: #475569;' }, formatVnd(fee.unit_amount)),
-    el('td', { style: 'padding: 0.72rem 0.75rem; width: 135px; text-align: right; color: #0f3f70; font-weight: 700;' }, formatVnd(fee.amount)),
+  const feeRows = feeItems.length > 0 ? feeItems.map((fee, index) => el('tr', { style: 'border-bottom: 1px solid #e2e8f0;' }, [
+    el('td', { style: 'padding: 0.65rem 0.75rem; width: 45px; text-align: center; color: #64748b;' }, String(index + 1)),
+    el('td', { style: 'padding: 0.65rem 0.75rem; color: #0f172a; font-weight: 600;' }, fee.name || `Khoản phí #${fee.id}`),
+    el('td', { style: 'padding: 0.65rem 0.75rem; width: 85px; text-align: center; color: #475569;' }, String(fee.quantity || 1)),
+    el('td', { style: 'padding: 0.65rem 0.75rem; width: 120px; text-align: right; color: #475569;' }, formatVnd(fee.unit_amount)),
+    el('td', { style: 'padding: 0.65rem 0.75rem; width: 130px; text-align: right; color: #004482; font-weight: 700;' }, formatVnd(fee.amount)),
   ])) : [el('tr', {}, [
-    el('td', { colspan: 5, style: 'padding: 1.25rem 0.75rem; color: #64748b; font-size: 12.5px; text-align: center;' }, isFree ? 'Thủ tục này không phát sinh phí, lệ phí.' : 'Chi tiết khoản thu đang được cập nhật.'),
+    el('td', { colspan: 5, style: 'padding: 1rem 0.75rem; color: #64748b; font-size: 12.5px; text-align: center;' }, isFree ? 'Thủ tục này không phát sinh phí, lệ phí.' : 'Chi tiết khoản thu đang được cập nhật.'),
   ])];
 
-  const feeTable = el('div', { style: 'overflow-x: auto;' }, [
-    el('table', { style: 'width: 100%; min-width: 620px; border-collapse: collapse; font-size: 12.5px;' }, [
-      el('thead', {}, el('tr', { style: 'background: #f8fafc; border-bottom: 1px solid #dfe5ec; text-align: left;' }, [
-        el('th', { style: 'padding: 0.62rem 0.75rem; width: 42px; text-align: center; color: #64748b; font-size: 11px;' }, 'STT'),
-        el('th', { style: 'padding: 0.62rem 0.75rem; color: #475569; font-size: 11px;' }, 'Nội dung khoản thu'),
-        el('th', { style: 'padding: 0.62rem 0.75rem; width: 72px; text-align: center; color: #475569; font-size: 11px;' }, 'SL'),
-        el('th', { style: 'padding: 0.62rem 0.75rem; width: 125px; text-align: right; color: #475569; font-size: 11px;' }, 'Đơn giá'),
-        el('th', { style: 'padding: 0.62rem 0.75rem; width: 135px; text-align: right; color: #475569; font-size: 11px;' }, 'Thành tiền'),
-      ])),
-      el('tbody', {}, feeRows),
+  const feeDetailsCard = el('div', { class: 'card', style: 'padding: 1.5rem; background: #ffffff; border: 1px solid #d0d7de; border-radius: 6px;' }, [
+    el('div', { style: 'display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem;' }, [
+      el('div', { style: 'font-size: 13.5px; font-weight: 800; color: #004482; text-transform: uppercase;' }, 'DANH MỤC CÁC KHOẢN THU PHÍ & LỆ PHÍ'),
+      el('span', { style: 'font-size: 12.5px; font-weight: 800; color: #004482;' }, `Tổng cộng: ${isFree ? 'Miễn phí' : formatVnd(totalFee)}`),
+    ]),
+    el('div', { style: 'overflow-x: auto;' }, [
+      el('table', { style: 'width: 100%; min-width: 620px; border-collapse: collapse; font-size: 12.5px;' }, [
+        el('thead', {}, el('tr', { style: 'background: #f8fafc; border-bottom: 1px solid #d0d7de; text-align: left;' }, [
+          el('th', { style: 'padding: 0.55rem 0.65rem; width: 45px; text-align: center;' }, 'STT'),
+          el('th', { style: 'padding: 0.55rem 0.65rem;' }, 'Mục phí / Lệ phí theo quy định'),
+          el('th', { style: 'padding: 0.55rem 0.65rem; width: 85px; text-align: center;' }, 'Số lượng'),
+          el('th', { style: 'padding: 0.55rem 0.65rem; width: 120px; text-align: right;' }, 'Đơn giá'),
+          el('th', { style: 'padding: 0.55rem 0.65rem; width: 130px; text-align: right;' }, 'Thành tiền'),
+        ])),
+        el('tbody', {}, [
+          ...feeRows,
+          el('tr', { style: 'background: #f8fafc; font-weight: 800;' }, [
+            el('td', { colspan: 4, style: 'padding: 0.65rem; text-align: right; color: #004482;' }, 'TỔNG CỘNG LỆ PHÍ PHẢI THU:'),
+            el('td', { style: 'padding: 0.65rem; text-align: right; color: #004482; font-size: 14px;' }, isFree ? 'Miễn phí' : formatVnd(totalFee)),
+          ]),
+        ]),
+      ]),
     ]),
   ]);
 
-  const totalFooter = el('div', { style: 'display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; padding: 0.95rem 1rem; border-top: 1px solid #dfe5ec; background: #fbfcfe;' }, [
-    el('span', { style: 'color: #475569; font-size: 12.5px; font-weight: 700;' }, 'Tổng số tiền phải nộp'),
-    el('strong', { style: `color: ${isFree ? '#475569' : '#0f3f70'}; font-size: 18px;` }, isFree ? 'Miễn phí' : formatVnd(totalFee)),
-  ]);
-
-  const feeSection = el('section', { style: 'min-width: 0; background: #ffffff; border: 1px solid #d7e0ea; border-radius: 4px; overflow: hidden;' }, [
-    el('div', { style: 'padding: 0.85rem 1rem; border-bottom: 1px solid #e5eaf0;' }, [
-      el('div', { style: 'font-size: 13px; color: #0f3f70; font-weight: 800;' }, 'Danh mục khoản thu'),
-      el('div', { style: 'margin-top: 0.2rem; color: #64748b; font-size: 11.5px;' }, `${feeItems.length || 0} khoản phí theo hồ sơ`),
-    ]),
-    feeTable,
-    totalFooter,
-    !isFree && !isPaid && !isDirect ? renderPaymentAction({
+  const paymentPanel = isFree
+    ? null
+    : renderPaymentPanel({
       appId,
       totalFee,
+      type: isPaid ? 'paid' : (isDirect ? 'direct' : 'online'),
+      transactionCode,
       onPay: async () => {
         const checkout = await createApplicationCheckout(api, appId);
         redirectToPaymentCheckout(checkout);
       },
-    }) : null,
-  ]);
+    });
 
-  const summaryItems = [
-    summaryRow('Mã hồ sơ', appId),
-    summaryRow('Phương thức', paymentMethod),
-    summaryRow('Số tiền', isFree ? 'Miễn phí' : formatVnd(totalFee), 'color: #0f3f70;'),
-    el('div', { style: 'padding: 0.78rem 0; border-bottom: 1px solid #e5e7eb;' }, [
-      el('div', { style: 'color: #64748b; font-size: 12px; margin-bottom: 0.4rem;' }, 'Trạng thái thanh toán'),
-      isFree
-        ? statusBadge('Miễn phí', 'neutral')
-        : (isPaid ? statusBadge('Đã thanh toán', 'success') : statusBadge('Chưa thanh toán', 'warning')),
-    ]),
-  ];
-
-  if (isPaid && !isFree && transactionCode) {
-    summaryItems.push(summaryRow('Mã giao dịch', transactionCode, 'font-family: monospace; font-size: 11px;'));
-  }
-
-  const summaryNote = isFree
-    ? 'Hồ sơ này không yêu cầu thanh toán.'
-    : (isPaid
-      ? 'Khoản thu đã được ghi nhận. Hồ sơ sẽ tiếp tục theo quy trình xử lý.'
-      : (isDirect
-        ? 'Công dân mang mã hồ sơ đến Bộ phận Một cửa. Cán bộ sẽ cập nhật sau khi thu tiền.'
-        : 'Bấm nút thanh toán sau khi kiểm tra lại số tiền. Hệ thống sẽ chuyển sang PayOS.'));
-
-  const summarySection = el('aside', { style: 'align-self: start; background: #f8fafc; border: 1px solid #d7e0ea; border-radius: 4px; padding: 1rem;' }, [
-    el('div', { style: 'padding-bottom: 0.75rem; border-bottom: 2px solid #0b5cab; color: #0f3f70; font-size: 13px; font-weight: 800;' }, 'Tóm tắt thanh toán'),
-    ...summaryItems,
-    el('div', { style: 'margin-top: 0.9rem; color: #64748b; font-size: 11.5px; line-height: 1.55;' }, summaryNote),
-  ]);
-
-  const contentGrid = el('div', { style: 'display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; align-items: start;' }, [feeSection, summarySection]);
-  container.append(pageIntro, contentGrid);
+  container.append(summaryCard, feeDetailsCard, paymentPanel);
   return container;
 }
