@@ -47,7 +47,25 @@ class PaymentService
                 'application_id' => $application->getKey(),
                 'provider' => $provider,
             ])),
-            fn (string|int $id): ?PaymentIntent => PaymentIntent::query()->find($id),
+            function (string|int $id): ?PaymentIntent {
+                $intent = PaymentIntent::query()->find($id);
+                if (! $intent) {
+                    return null;
+                }
+
+                if ($intent->status === PaymentStatus::Pending && $intent->expires_at?->isPast()) {
+                    $intent->status = PaymentStatus::Expired;
+                    $intent->save();
+
+                    return null;
+                }
+
+                if ($intent->status === PaymentStatus::Expired) {
+                    return null;
+                }
+
+                return $intent;
+            },
             fn (): PaymentIntent => PaymentIntent::create([
                 'IDCD' => $application->IDCD,
                 'maHSXL' => $application->getKey(),
