@@ -30,6 +30,7 @@ class HoSoXuLy extends Model
         'email',
         'soDienThoai',
         'dulieu',
+        'ngayNop',
         'ngayTiepNhan',
         'ngayHenTra',
         'maTrangThai',
@@ -54,6 +55,7 @@ class HoSoXuLy extends Model
 
     protected $casts = [
         'dulieu' => 'array',
+        'ngayNop' => 'datetime',
         'ngayTiepNhan' => 'date',
         'ngayHenTra' => 'date',
         'ngayTra' => 'date',

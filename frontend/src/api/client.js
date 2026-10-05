@@ -52,37 +52,44 @@ export function setStoredUser(user) {
   sessionStorage.removeItem(USER_KEY);
 }
 
-let isRefreshing = false;
+let refreshPromise = null;
 
-async function tryRefreshToken() {
+function tryRefreshToken() {
+  if (refreshPromise) return refreshPromise;
+
   const refreshToken = getRefreshToken() || getAuthToken();
-  if (!refreshToken || isRefreshing) return null;
-  isRefreshing = true;
-  try {
-    const res = await fetch(`${BASE_URL}/auth/refresh`, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
-    if (!res.ok) throw new Error('Refresh failed');
-    const data = await res.json();
-    const newAccessToken = data.data?.access_token || data.access_token;
-    const newRefreshToken = data.data?.refresh_token || data.refresh_token || newAccessToken;
-    if (newAccessToken) {
-      setAuthTokens(newAccessToken, newRefreshToken);
-      if (data.data?.user) setStoredUser(data.data.user);
-      return newAccessToken;
+  if (!refreshToken) return Promise.resolve(null);
+
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      if (!res.ok) throw new Error('Refresh failed');
+      const data = await res.json();
+      const newAccessToken = data.data?.access_token || data.access_token;
+      const newRefreshToken = data.data?.refresh_token || data.refresh_token || newAccessToken;
+      if (newAccessToken) {
+        setAuthTokens(newAccessToken, newRefreshToken);
+        if (data.data?.user) setStoredUser(data.data.user);
+        return newAccessToken;
+      }
+    } catch (_) {
+      clearAuthToken();
+      window.dispatchEvent(new CustomEvent('auth:change', { detail: null }));
     }
-  } catch (_) {
-    clearAuthToken();
-    window.dispatchEvent(new CustomEvent('auth:change', { detail: null }));
-  } finally {
-    isRefreshing = false;
-  }
-  return null;
+
+    return null;
+  })().finally(() => {
+    refreshPromise = null;
+  });
+
+  return refreshPromise;
 }
 
 export async function request(endpoint, options = {}) {

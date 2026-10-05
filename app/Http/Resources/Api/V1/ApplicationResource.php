@@ -32,6 +32,7 @@ class ApplicationResource extends JsonResource
                 'name' => $this->whenLoaded('trangThai', fn () => $this->trangThai?->tenTrangThai),
             ],
             'applicant_name' => $this->tenChuHoSo,
+            'submitted_at' => optional($this->ngayNop)->toIso8601String(),
             'received_at' => optional($this->ngayTiepNhan)->toDateString(),
             'due_at' => optional($this->ngayHenTra)->toDateString(),
             'delivered_at' => optional($this->ngayTra)->toDateString(),
