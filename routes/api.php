@@ -70,6 +70,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('applications', [CitizenApplicationController::class, 'index']);
         Route::post('applications', [CitizenApplicationController::class, 'store'])->middleware('throttle:citizen-submissions');
         Route::get('applications/{application}', [CitizenApplicationController::class, 'show']);
+        Route::patch('applications/{application}', [CitizenApplicationController::class, 'update']);
         Route::post('applications/{application}/cancel', [CitizenApplicationController::class, 'cancel']);
         Route::post('applications/{application}/rating', [CitizenApplicationController::class, 'rate']);
         Route::post('applications/{application}/supplements', [\App\Http\Controllers\Api\V1\Citizen\ApplicationFileController::class, 'supplement']);

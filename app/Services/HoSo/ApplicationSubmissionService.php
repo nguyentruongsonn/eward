@@ -72,6 +72,37 @@ class ApplicationSubmissionService
             ->firstOrFail();
     }
 
+    public function updateDraft(HoSoXuLy $application, array $data): HoSoXuLy
+    {
+        return DB::transaction(function () use ($application, $data): HoSoXuLy {
+            $locked = HoSoXuLy::query()->whereKey($application->getKey())->lockForUpdate()->firstOrFail();
+            if (! in_array((int) $locked->maTrangThai, [HoSoStatus::PendingPayment->value, HoSoStatus::PendingReception->value], true)) {
+                throw new ApiException('Hồ sơ chỉ được chỉnh sửa khi đang chờ thanh toán hoặc chờ tiếp nhận.', 'APPLICATION_EDIT_INVALID', 409);
+            }
+
+            $stored = is_array($locked->dulieu) ? $locked->dulieu : [];
+            $payload = is_array($stored['payload'] ?? null) ? $stored['payload'] : [];
+            $payload = array_replace($payload, $data);
+            $locked->dulieu = [...$stored, 'payload' => $payload];
+
+            foreach ([
+                'ho_ten' => 'tenChuHoSo',
+                'full_name' => 'tenChuHoSo',
+                'so_dien_thoai' => 'soDienThoai',
+                'phone' => 'soDienThoai',
+                'email' => 'email',
+            ] as $input => $column) {
+                if (array_key_exists($input, $data) && trim((string) $data[$input]) !== '') {
+                    $locked->{$column} = trim((string) $data[$input]);
+                }
+            }
+
+            $locked->save();
+
+            return $locked->fresh(['trangThai', 'tthc']);
+        });
+    }
+
     public function submit(Nguoi $user, array $data, ?string $idempotencyKey = null): HoSoXuLy
     {
         $fingerprint = hash('sha256', serialize($data));

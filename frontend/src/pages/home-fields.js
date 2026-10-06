@@ -27,7 +27,7 @@ export function renderHomeFields({ navigate }) {
         el('h3', { style: 'font-family: var(--font-heading); font-size: 15px; font-weight: 700; color: #004482; margin: 0;' }, f.name),
         el('span', {
           style: 'font-size: 11px; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 3px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; white-space: nowrap;',
-        }, `${f.count} thủ tục`),
+        }, String(f.count)),
       ]),
       el('p', { style: 'font-size: 12.5px; color: #475569; line-height: 1.5; margin: 0;' }, f.desc),
     ]));

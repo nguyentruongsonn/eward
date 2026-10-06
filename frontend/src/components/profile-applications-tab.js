@@ -1,6 +1,8 @@
 import { el } from './dom.js';
 import { api } from '../api/client.js';
 import { openApplicationDetailModal } from './profile-application-detail-modal.js';
+import { openApplicationEditModal } from './profile-application-edit-modal.js';
+import { showToast } from './toast.js';
 
 export function createProfileApplicationsTab({ navigate }) {
   const container = el('div', { class: 'profile-tab-content' });
@@ -24,7 +26,7 @@ export function createProfileApplicationsTab({ navigate }) {
     el('option', { value: 'dang_xu_ly' }, 'Đang xử lý'),
     el('option', { value: 'da_hoan_thanh' }, 'Đã hoàn thành'),
   ]);
-  filterBar.append(el('span', { style: 'font-size: 12px; color: #64748b; font-weight: 600;' }, 'Lọc hồ sơ:'), statusSelect);
+  filterBar.append(statusSelect);
 
   const contentArea = el('div', { style: 'min-height: 200px;' }, [
     el('div', { style: 'text-align: center; padding: 3rem 1rem; color: #64748b; font-size: 13px;' }, 'Đang tải danh sách hồ sơ...'),
@@ -112,15 +114,7 @@ export function createProfileApplicationsTab({ navigate }) {
             Number(app.fee || app.lePhi || 0) > 0 ? `${Number(app.fee || app.lePhi).toLocaleString('vi-VN')} đ` : 'Miễn phí'
           ),
         ]),
-        el('td', { style: 'padding: 0.85rem 1rem; text-align: center;' }, [
-          el('button', {
-            type: 'button',
-            class: 'btn btn-secondary btn-sm',
-            style: 'border: 1px solid #cbd5e1; font-size: 11.5px; font-weight: 700; padding: 0.3rem 0.75rem; color: #004482;',
-            title: 'Xem chi tiết hồ sơ',
-            onClick: () => openApplicationDetailModal(app),
-          }, Number(app.fee ?? app.lePhi ?? 0) > 0 && !app.payment_status?.is_paid ? 'Xem / thanh toán' : 'Xem'),
-        ]),
+        el('td', { style: 'padding: 0.85rem 1rem; text-align: center;' }, [createActionMenu(app)]),
       ]);
     }));
 
@@ -128,6 +122,40 @@ export function createProfileApplicationsTab({ navigate }) {
     tableWrapper.replaceChildren(table);
     contentArea.replaceChildren(tableWrapper);
     renderPagination(pagination);
+  }
+
+  function createActionMenu(app) {
+    const details = el('details', { style: 'position: relative; display: inline-block; text-align: left;' });
+    const summary = el('summary', {
+      style: 'list-style: none; cursor: pointer; border: 1px solid #cbd5e1; border-radius: 4px; padding: 0.35rem 0.7rem; background: #ffffff; color: #004482; font-size: 11.5px; font-weight: 700; white-space: nowrap;',
+    }, 'Thao tác ▾');
+    const menu = el('div', { style: 'position: absolute; right: 0; top: calc(100% + 0.3rem); z-index: 20; min-width: 170px; padding: 0.3rem; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 5px; box-shadow: 0 8px 20px rgba(15,23,42,0.12);' });
+    const close = () => { details.open = false; };
+    getCitizenApplicationActions(app).forEach((action) => {
+      const labels = { view: 'Xem chi tiết', pay: 'Thanh toán', edit: 'Chỉnh sửa hồ sơ', cancel: 'Rút hồ sơ' };
+      const button = el('button', {
+        type: 'button',
+        style: `display: block; width: 100%; padding: 0.5rem 0.65rem; border: none; background: transparent; color: ${action === 'cancel' ? '#b91c1c' : '#334155'}; text-align: left; font-size: 12px; cursor: pointer; border-radius: 3px;`,
+        onClick: async () => {
+          close();
+          if (action === 'view' || action === 'pay') return openApplicationDetailModal(app);
+          if (action === 'edit') return openApplicationEditModal(app, { onSaved: () => loadApplications() });
+          if (action === 'cancel') {
+            if (!window.confirm('Bạn có chắc muốn rút hồ sơ này?')) return;
+            try {
+              await api.post(`/citizen/applications/${app.id || app.maHSXL}/cancel`, { reason: 'Công dân yêu cầu rút hồ sơ.' });
+              showToast.success('Đã gửi yêu cầu rút hồ sơ.');
+              loadApplications();
+            } catch (err) {
+              showToast.error(err?.data?.message || err?.message || 'Không thể rút hồ sơ.');
+            }
+          }
+        },
+      }, labels[action]);
+      menu.append(button);
+    });
+    details.append(summary, menu);
+    return details;
   }
 
   function renderPagination(pagination) {
@@ -208,6 +236,17 @@ export function formatSubmissionDate(value) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date);
+}
+
+export function getCitizenApplicationActions(app = {}) {
+  const statusId = Number(app.status?.id || app.status_id || app.maTrangThai);
+  const fee = Number(app.fee ?? app.lePhi ?? 0);
+  const isPaid = fee <= 0 || Boolean(app.payment_status?.is_paid);
+  const actions = ['view'];
+  if (fee > 0 && !isPaid && app.payment_status?.method !== 'direct') actions.push('pay');
+  if ([13, 1].includes(statusId)) actions.push('edit');
+  if ([13, 1, 2, 4, 5, 6, 11, 12].includes(statusId)) actions.push('cancel');
+  return actions;
 }
 
 export function buildCitizenApplicationsQuery({ page = 1, perPage = 10, status = '' } = {}) {
