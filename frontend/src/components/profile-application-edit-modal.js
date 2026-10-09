@@ -114,6 +114,7 @@ export function openApplicationEditModal(app, { onSaved } = {}) {
   body.append(el('p', { style: 'margin: 0 0 1rem; color: #64748b; font-size: 12.5px; line-height: 1.5;' }, 'Chỉ có thể chỉnh sửa khi hồ sơ đang chờ thanh toán hoặc chờ tiếp nhận. Thông tin lệ phí và phương thức thanh toán được hệ thống bảo toàn.'));
   body.append(form);
   overlay.addEventListener('click', (event) => { if (event.target === overlay) close(); });
+  overlay.append(modal);
   document.body.append(overlay);
   return overlay;
 }
