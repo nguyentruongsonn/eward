@@ -8,7 +8,7 @@ export function renderProfileModalDossierTab(app) {
   const payloadFiles = Array.isArray(formPayload.attached_files) || Array.isArray(rawData.files)
     ? (Array.isArray(formPayload.attached_files) ? formPayload.attached_files : rawData.files)
     : [];
-  const combinedFiles = [...apiFiles, ...payloadFiles];
+  const combinedFiles = deduplicateFiles([...apiFiles, ...payloadFiles]);
 
   const container = el('div', { style: 'display: flex; flex-direction: column; gap: 1.25rem;' });
 
@@ -59,4 +59,15 @@ export function renderProfileModalDossierTab(app) {
 
   container.append(dossierCard);
   return container;
+}
+
+function deduplicateFiles(files) {
+  const seen = new Set();
+  return files.filter((file) => {
+    const documentId = file.document_type_id || file.document_id;
+    const key = documentId ? `document:${documentId}` : `file:${file.file_name || file.name || file.tenTep}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }

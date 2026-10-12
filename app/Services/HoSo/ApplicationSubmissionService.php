@@ -32,7 +32,7 @@ class ApplicationSubmissionService
     ): LengthAwarePaginator {
         $query = HoSoXuLy::query()
             ->whereIn('IDCD', $user->congDan()->select('IDCD'))
-            ->with(['trangThai', 'tthc', 'paymentHistories', 'paymentIntents']);
+            ->with(['trangThai', 'tthc.thanhPhanHoSos.giayTos', 'files', 'paymentHistories', 'paymentIntents']);
 
         if (($serviceName = trim((string) ($filters['ten_dich_vu'] ?? ''))) !== '') {
             $query->whereHas('tthc', fn ($procedure) => $procedure->where('tenTTHC', 'like', "%{$serviceName}%"));
@@ -68,7 +68,7 @@ class ApplicationSubmissionService
         return HoSoXuLy::query()
             ->whereKey($applicationId)
             ->whereIn('IDCD', $user->congDan()->select('IDCD'))
-            ->with(['trangThai', 'tthc', 'congdan.nguoi'])
+            ->with(['trangThai', 'tthc.thanhPhanHoSos.giayTos', 'files', 'congdan.nguoi'])
             ->firstOrFail();
     }
 

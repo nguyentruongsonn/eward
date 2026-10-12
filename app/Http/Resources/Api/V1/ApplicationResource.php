@@ -47,6 +47,18 @@ class ApplicationResource extends JsonResource
             ],
             'delivery_method' => $this->hinhThuc,
             'data' => $this->dulieu,
+            'files' => $this->when($this->relationLoaded('files'), fn (): array => FileResource::collection($this->files)->resolve($request)),
+            'procedure_components' => $this->when(
+                $this->tthc?->relationLoaded('thanhPhanHoSos'),
+                fn (): array => $this->tthc->thanhPhanHoSos->flatMap(fn ($component) => $component->giayTos->map(fn ($document): array => [
+                    'component_id' => $component->getKey(),
+                    'component_name' => $component->tenThanhPhan,
+                    'id' => $document->getKey(),
+                    'name' => $document->tenGiayTo,
+                    'type' => $document->loaiGiayTo,
+                    'required' => $document->yeuCau,
+                ]))->values()->all(),
+            ),
             'supplement_request' => $this->when(
                 (int) $this->maTrangThai === 5 && is_array($supplementRequest),
                 fn () => [
