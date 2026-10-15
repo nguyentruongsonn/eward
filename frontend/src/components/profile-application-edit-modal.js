@@ -79,8 +79,6 @@ export function createApplicationEditForm(app, { onSaved, onBusy } = {}) {
     },
   });
 
-  form.append(el('div', { style: 'padding: 0.75rem 1rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 5px; color: #1e3a8a; font-size: 12.5px; line-height: 1.5;' }, 'Chỉ có thể chỉnh sửa khi hồ sơ đang chờ thanh toán hoặc chờ tiếp nhận. Thông tin lệ phí và phương thức thanh toán được bảo toàn.'));
-
   if (fields.length > 0) {
     const grid = el('div', { style: 'display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;' });
     fields.forEach(([key, value]) => {
@@ -103,7 +101,6 @@ export function createApplicationEditForm(app, { onSaved, onBusy } = {}) {
   if (documentEntries.length > 0) {
     const dossierSection = el('section', { style: 'padding-top: 1rem; border-top: 1px solid #e2e8f0;' }, [
       el('div', { style: 'font-size: 13px; font-weight: 800; color: #004482; margin-bottom: 0.25rem;' }, 'THÀNH PHẦN HỒ SƠ'),
-      el('div', { style: 'font-size: 12px; color: #64748b; margin-bottom: 0.75rem;' }, 'Chọn tệp mới để thay thế tài liệu đã nộp cùng loại.'),
     ]);
     const dossierList = el('div', { style: 'display: flex; flex-direction: column; gap: 0.65rem;' });
     documentEntries.forEach((entry, index) => {

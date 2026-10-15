@@ -8,10 +8,27 @@ export function createProfileApplicationsTab({ navigate }) {
 
   let currentPage = 1;
   let currentStatus = '';
+  let currentDateFrom = '';
+  let currentDateTo = '';
+  let currentSort = 'latest';
   const perPage = 10;
   const filterBar = el('div', {
     style: 'display: flex; justify-content: flex-end; align-items: center; gap: 0.6rem; margin-bottom: 0.85rem; flex-wrap: wrap;',
   });
+  const dateFromInput = el('input', { type: 'date', class: 'input', style: 'height: 36px; font-size: 12.5px;', 'aria-label': 'Từ ngày' });
+  const dateToInput = el('input', { type: 'date', class: 'input', style: 'height: 36px; font-size: 12.5px;', 'aria-label': 'Đến ngày' });
+  const sortSelect = el('select', {
+    class: 'input',
+    style: 'height: 36px; min-width: 135px; font-size: 12.5px;',
+    onChange: (event) => {
+      currentSort = event.target.value;
+      currentPage = 1;
+      loadApplications();
+    },
+  }, [
+    el('option', { value: 'latest' }, 'Mới nhất'),
+    el('option', { value: 'oldest' }, 'Cũ nhất'),
+  ]);
   const statusSelect = el('select', {
     class: 'input',
     style: 'height: 36px; min-width: 190px; font-size: 12.5px;',
@@ -25,7 +42,46 @@ export function createProfileApplicationsTab({ navigate }) {
     el('option', { value: 'dang_xu_ly' }, 'Đang xử lý'),
     el('option', { value: 'da_hoan_thanh' }, 'Đã hoàn thành'),
   ]);
-  filterBar.append(statusSelect);
+  const filterButton = el('button', {
+    type: 'button',
+    class: 'btn btn-primary btn-sm',
+    style: 'height: 36px; background: #004482; font-weight: 700;',
+    onClick: () => {
+      if (dateFromInput.value && dateToInput.value && dateFromInput.value > dateToInput.value) {
+        showToast.error('Ngày bắt đầu không được sau ngày kết thúc.');
+        return;
+      }
+      currentDateFrom = dateFromInput.value;
+      currentDateTo = dateToInput.value;
+      currentPage = 1;
+      loadApplications();
+    },
+  }, 'Lọc');
+  const resetButton = el('button', {
+    type: 'button',
+    class: 'btn btn-secondary btn-sm',
+    style: 'height: 36px;',
+    onClick: () => {
+      dateFromInput.value = '';
+      dateToInput.value = '';
+      currentDateFrom = '';
+      currentDateTo = '';
+      currentStatus = '';
+      currentSort = 'latest';
+      statusSelect.value = '';
+      sortSelect.value = 'latest';
+      currentPage = 1;
+      loadApplications();
+    },
+  }, 'Xóa lọc');
+  filterBar.append(
+    el('label', { style: 'display: flex; align-items: center; gap: 0.35rem; font-size: 11.5px; color: #64748b;' }, ['Từ', dateFromInput]),
+    el('label', { style: 'display: flex; align-items: center; gap: 0.35rem; font-size: 11.5px; color: #64748b;' }, ['Đến', dateToInput]),
+    sortSelect,
+    statusSelect,
+    filterButton,
+    resetButton,
+  );
 
   const contentArea = el('div', { style: 'min-height: 200px;' }, [
     el('div', { style: 'text-align: center; padding: 3rem 1rem; color: #64748b; font-size: 13px;' }, 'Đang tải danh sách hồ sơ...'),
@@ -40,7 +96,7 @@ export function createProfileApplicationsTab({ navigate }) {
     paginationArea.replaceChildren();
 
     try {
-      const url = `/citizen/applications${buildCitizenApplicationsQuery({ page: currentPage, perPage, status: currentStatus })}`;
+      const url = `/citizen/applications${buildCitizenApplicationsQuery({ page: currentPage, perPage, status: currentStatus, dateFrom: currentDateFrom, dateTo: currentDateTo, sort: currentSort })}`;
       const res = await api.get(url);
       const list = res?.data || [];
       renderList(list, getPaginationState(res?.meta?.pagination));
@@ -247,9 +303,12 @@ export function getCitizenApplicationActions(app = {}) {
   return actions;
 }
 
-export function buildCitizenApplicationsQuery({ page = 1, perPage = 10, status = '' } = {}) {
+export function buildCitizenApplicationsQuery({ page = 1, perPage = 10, status = '', dateFrom = '', dateTo = '', sort = '' } = {}) {
   const query = new URLSearchParams();
   if (status) query.set('trang_thai', status);
+  if (dateFrom) query.set('date_from', dateFrom);
+  if (dateTo) query.set('date_to', dateTo);
+  if (sort) query.set('sort', sort);
   query.set('page', String(Math.max(1, page)));
   query.set('per_page', String(Math.max(1, perPage)));
   return `?${query.toString()}`;
