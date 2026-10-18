@@ -13,13 +13,13 @@ export function createProfileApplicationsTab({ navigate }) {
   let currentSort = 'latest';
   const perPage = 10;
   const filterBar = el('div', {
-    style: 'display: flex; justify-content: flex-start; align-items: center; gap: 0.6rem; margin-bottom: 0.85rem; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px;',
+    style: 'display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(135px, 1fr) minmax(190px, 1.35fr) auto auto; align-items: center; gap: 0.6rem; width: 100%; box-sizing: border-box; margin-bottom: 0.85rem;',
   });
-  const dateFromInput = el('input', { type: 'date', class: 'input', style: 'width: 130px; min-width: 130px; height: 36px; font-size: 12.5px;', 'aria-label': 'Từ ngày' });
-  const dateToInput = el('input', { type: 'date', class: 'input', style: 'width: 130px; min-width: 130px; height: 36px; font-size: 12.5px;', 'aria-label': 'Đến ngày' });
+  const dateFromInput = el('input', { type: 'date', class: 'input', style: 'width: 100%; min-width: 0; height: 36px; font-size: 12.5px; box-sizing: border-box;', 'aria-label': 'Từ ngày' });
+  const dateToInput = el('input', { type: 'date', class: 'input', style: 'width: 100%; min-width: 0; height: 36px; font-size: 12.5px; box-sizing: border-box;', 'aria-label': 'Đến ngày' });
   const sortSelect = el('select', {
     class: 'input',
-    style: 'width: 135px; min-width: 135px; height: 36px; font-size: 12.5px;',
+    style: 'width: 100%; min-width: 0; height: 36px; font-size: 12.5px; box-sizing: border-box;',
     onChange: (event) => {
       currentSort = event.target.value;
       currentPage = 1;
@@ -31,7 +31,7 @@ export function createProfileApplicationsTab({ navigate }) {
   ]);
   const statusSelect = el('select', {
     class: 'input',
-    style: 'width: 190px; min-width: 190px; height: 36px; font-size: 12.5px;',
+    style: 'width: 100%; min-width: 0; height: 36px; font-size: 12.5px; box-sizing: border-box;',
     onChange: (event) => {
       currentStatus = event.target.value;
       currentPage = 1;
@@ -75,8 +75,8 @@ export function createProfileApplicationsTab({ navigate }) {
     },
   }, 'Xóa lọc');
   filterBar.append(
-    el('label', { style: 'display: flex; align-items: center; gap: 0.35rem; flex: 0 0 auto; white-space: nowrap; font-size: 11.5px; color: #64748b;' }, ['Từ', dateFromInput]),
-    el('label', { style: 'display: flex; align-items: center; gap: 0.35rem; flex: 0 0 auto; white-space: nowrap; font-size: 11.5px; color: #64748b;' }, ['Đến', dateToInput]),
+    el('label', { style: 'display: flex; align-items: center; gap: 0.35rem; min-width: 0; width: 100%; white-space: nowrap; font-size: 11.5px; color: #64748b;' }, ['Từ', dateFromInput]),
+    el('label', { style: 'display: flex; align-items: center; gap: 0.35rem; min-width: 0; width: 100%; white-space: nowrap; font-size: 11.5px; color: #64748b;' }, ['Đến', dateToInput]),
     sortSelect,
     statusSelect,
     filterButton,
