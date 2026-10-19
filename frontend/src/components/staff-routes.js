@@ -53,7 +53,7 @@ export function canAccessStaffRoute(pathname = "", role = null) {
   if (role === "administrator") return true;
 
   if (cleanPath === "/can-bo") {
-    return ["case-officer", "leader", "checkin"].includes(role);
+    return ["case-officer", "one-stop", "leader", "checkin"].includes(role);
   }
 
   if (cleanPath === "/can-bo/ho-so" || cleanPath.startsWith("/can-bo/ho-so/")) {
