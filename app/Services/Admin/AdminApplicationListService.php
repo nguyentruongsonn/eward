@@ -5,11 +5,14 @@ namespace App\Services\Admin;
 use App\Enums\HoSoStatus;
 use App\Models\HoSoXuLy;
 use App\Models\TrangThaiHoSo;
+use App\Services\Search\ApplicationSearchService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
 class AdminApplicationListService
 {
+    public function __construct(private readonly ApplicationSearchService $applicationSearch) {}
+
     public const DEFAULT_SCOPE = 'default';
 
     public const ALL_SCOPE = 'all';
@@ -52,7 +55,14 @@ class AdminApplicationListService
             ->where('maHSXL', '!=', '0')
             ->where('maHSXL', '!=', '');
 
-        $this->applySearch($query, $filters);
+        $searchIds = $this->searchIds($filters);
+        if ($searchIds === null) {
+            $this->applySearch($query, $filters);
+        } elseif ($searchIds === []) {
+            $query->whereRaw('1 = 0');
+        } else {
+            $query->whereIn('maHSXL', $searchIds);
+        }
         $hasDateFilter = $this->applyDates($query, $filters);
         $this->applyOverdue($query, $filters);
         $this->applyScope($query, $filters, $scope, $hasDateFilter);
@@ -88,6 +98,17 @@ class AdminApplicationListService
                 ->orWhere('email', 'like', '%'.$search.'%')
                 ->orWhere('soDienThoai', 'like', '%'.$search.'%');
         });
+    }
+
+    private function searchIds(array $filters): ?array
+    {
+        if (! $this->filled($filters, 'search')) {
+            return null;
+        }
+
+        $result = $this->applicationSearch->searchApplicationIds((string) $filters['search']);
+
+        return $result === null ? null : $result['ids'];
     }
 
     private function applyDates($query, array $filters): bool

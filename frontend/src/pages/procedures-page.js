@@ -20,6 +20,8 @@ export function renderProceduresPage({ navigate }) {
   ]);
 
   let allProcedures = [];
+  let requestSequence = 0;
+  let searchTimer = null;
   let selectedFieldId = 'all';
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -34,7 +36,10 @@ export function renderProceduresPage({ navigate }) {
     placeholder: 'Tìm kiếm theo tên thủ tục hoặc từ khóa (ví dụ: Khai sinh, Kết hôn, Bản sao, Cư trú)...',
     value: qParam,
     style: 'flex: 2; height: 42px; font-size: 13px;',
-    onInput: () => renderList(),
+    onInput: () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(loadProcedures, 250);
+    },
   });
 
   const fieldSelect = el('select', {
@@ -42,7 +47,7 @@ export function renderProceduresPage({ navigate }) {
     style: 'flex: 1; min-width: 220px; height: 42px; font-size: 13px; cursor: pointer;',
     onChange: (e) => {
       selectedFieldId = e.target.value;
-      renderList();
+      loadProcedures();
     },
   }, [
     el('option', { value: 'all' }, 'Tất cả lĩnh vực quản lý'),
@@ -59,14 +64,7 @@ export function renderProceduresPage({ navigate }) {
   const listContainer = el('div', { style: 'display: flex; flex-direction: column; gap: 0.75rem;' });
 
   function renderList() {
-    const query = searchInput.value.trim().toLowerCase();
-    const filtered = allProcedures.filter(p => {
-      const matchQuery = !query || p.name.toLowerCase().includes(query) || (p.field_name && p.field_name.toLowerCase().includes(query));
-      const matchField = selectedFieldId === 'all' || String(p.field_id) === String(selectedFieldId);
-      return matchQuery && matchField;
-    });
-
-    countBadge.textContent = `Hiển thị ${filtered.length} thủ tục hành chính:`;
+    const filtered = allProcedures;
 
     if (filtered.length === 0) {
       listContainer.replaceChildren(el('div', {
@@ -117,10 +115,34 @@ export function renderProceduresPage({ navigate }) {
     listContainer.replaceChildren(...cards);
   }
 
-  Promise.all([
-    api.get('/public/fields'),
-    api.get('/public/procedures?per_page=100'),
-  ]).then(([fieldsRes, procsRes]) => {
+  async function loadProcedures() {
+    const sequence = ++requestSequence;
+    const params = new URLSearchParams({ per_page: '100' });
+    const query = searchInput.value.trim();
+    if (query) params.set('q', query);
+    if (selectedFieldId !== 'all') params.set('field_id', selectedFieldId);
+
+    countBadge.textContent = 'Đang tìm kiếm thủ tục...';
+
+    try {
+      const response = await api.get(`/public/procedures?${params.toString()}`);
+      if (sequence !== requestSequence) return;
+
+      allProcedures = response?.data || [];
+      const total = response?.meta?.pagination?.total ?? allProcedures.length;
+      countBadge.textContent = `Hiển thị ${total} thủ tục hành chính:`;
+      renderList();
+    } catch (err) {
+      if (sequence !== requestSequence) return;
+      countBadge.textContent = 'Không thể tải danh mục từ máy chủ.';
+      listContainer.replaceChildren(el('div', {
+        style: 'padding: 3rem; text-align: center; background: #ffffff; border: 1px dashed #d0d7de; border-radius: 4px; color: #b91c1c;',
+      }, 'Không thể tải danh sách thủ tục.'));
+      console.error('Error fetching procedures:', err);
+    }
+  }
+
+  api.get('/public/fields').then((fieldsRes) => {
     if (fieldsRes?.data) {
       fieldsRes.data.forEach(f => {
         const opt = el('option', { value: String(f.maLinhVuc) }, f.tenLinhVuc);
@@ -128,11 +150,7 @@ export function renderProceduresPage({ navigate }) {
         fieldSelect.append(opt);
       });
     }
-
-    if (procsRes?.data) {
-      allProcedures = procsRes.data;
-      renderList();
-    }
+    return loadProcedures();
   }).catch(err => {
     countBadge.textContent = 'Không thể tải danh mục từ máy chủ.';
     console.error('Error fetching procedures:', err);

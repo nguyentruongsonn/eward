@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use App\Enums\PaymentStatus;
+use App\Services\Search\ApplicationSearchService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class HoSoXuLy extends Model
 {
@@ -105,6 +107,21 @@ class HoSoXuLy extends Model
 
                 $hoso->maHSXL = $maHSXL;
             }
+        });
+
+        static::saved(function (HoSoXuLy $application): void {
+            DB::afterCommit(function () use ($application): void {
+                $freshApplication = $application->fresh();
+                if ($freshApplication !== null) {
+                    app(ApplicationSearchService::class)->sync($freshApplication);
+                }
+            });
+        });
+
+        static::deleted(function (HoSoXuLy $application): void {
+            DB::afterCommit(function () use ($application): void {
+                app(ApplicationSearchService::class)->remove((string) $application->getKey());
+            });
         });
     }
 

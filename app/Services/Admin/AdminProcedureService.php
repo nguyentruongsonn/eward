@@ -5,12 +5,15 @@ namespace App\Services\Admin;
 use App\Exceptions\ApiException;
 use App\Models\LinhVuc;
 use App\Models\TTHC;
+use App\Services\Search\ProcedureSearchService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class AdminProcedureService
 {
+    public function __construct(private readonly ProcedureSearchService $procedureSearch) {}
+
     public function fields()
     {
         return LinhVuc::query()->orderBy('tenLinhVuc')->get();
@@ -71,7 +74,7 @@ class AdminProcedureService
 
     public function create(array $attributes, array $audienceIds = [], array $methods = [], array $fees = [], ?string $formConfig = null, array $components = []): TTHC
     {
-        return DB::transaction(function () use ($attributes, $audienceIds, $methods, $fees, $formConfig, $components): TTHC {
+        $created = DB::transaction(function () use ($attributes, $audienceIds, $methods, $fees, $formConfig, $components): TTHC {
             $procedureId = DB::table('tthc')->insertGetId([
                 'tenTTHC' => $attributes['tenTTHC'],
                 'maLinhVuc' => $attributes['maLinhVuc'],
@@ -98,6 +101,10 @@ class AdminProcedureService
 
             return $created;
         });
+
+        $this->procedureSearch->sync($created);
+
+        return $created;
     }
 
     /**
@@ -106,7 +113,7 @@ class AdminProcedureService
     /** @param array<string, mixed> $related */
     public function update(int $id, array $attributes, array $related = []): TTHC
     {
-        return DB::transaction(function () use ($id, $attributes, $related): TTHC {
+        $updated = DB::transaction(function () use ($id, $attributes, $related): TTHC {
             $procedure = DB::table('tthc')->where('maTTHC', $id)->lockForUpdate()->firstOrFail();
             DB::table('tthc')->where('maTTHC', $procedure->maTTHC)->update([
                 'tenTTHC' => $attributes['tenTTHC'],
@@ -129,6 +136,10 @@ class AdminProcedureService
 
             return $updated;
         });
+
+        $this->procedureSearch->sync($updated);
+
+        return $updated;
     }
 
     /** @param array<string, mixed> $related */
@@ -235,5 +246,7 @@ class AdminProcedureService
             DB::table('tthc')->where('maTTHC', $id)->delete();
             Cache::forget('chat_assistant_knowledge_context');
         });
+
+        $this->procedureSearch->remove($id);
     }
 }
