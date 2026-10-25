@@ -5,6 +5,7 @@ namespace App\Services\Search;
 use App\Contracts\Search\ProcedureSearchGateway;
 use App\Models\TTHC;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class ProcedureSearchService
 {
@@ -23,6 +24,9 @@ class ProcedureSearchService
             $filters[] = ['term' => ['field_id' => $fieldId]];
         }
 
+        $search = trim($query);
+        $normalizedSearch = trim(Str::ascii(Str::lower($search))) ?: $search;
+
         try {
             $response = $this->gateway->search([
                 'from' => max(0, $page - 1) * $perPage,
@@ -32,14 +36,14 @@ class ProcedureSearchService
                     'bool' => [
                         'must' => [[
                             'multi_match' => [
-                                'query' => trim($query),
+                                'query' => $normalizedSearch,
                                 'type' => 'bool_prefix',
                                 'fields' => [
-                                    'name',
-                                    'name._2gram',
-                                    'name._3gram',
+                                    'name_normalized',
+                                    'name_normalized._2gram',
+                                    'name_normalized._3gram',
                                     'code',
-                                    'field_name',
+                                    'field_name_normalized',
                                 ],
                             ],
                         ]],
@@ -132,12 +136,17 @@ class ProcedureSearchService
 
     private function document(TTHC $procedure): array
     {
+        $name = (string) $procedure->tenTTHC;
+        $fieldName = $procedure->linhVuc?->tenLinhVuc;
+
         return [
             'id' => (int) $procedure->getKey(),
             'code' => (string) $procedure->getKey(),
-            'name' => (string) $procedure->tenTTHC,
+            'name' => $name,
+            'name_normalized' => Str::ascii(Str::lower($name)),
             'field_id' => $procedure->maLinhVuc !== null ? (int) $procedure->maLinhVuc : null,
-            'field_name' => $procedure->linhVuc?->tenLinhVuc,
+            'field_name' => $fieldName,
+            'field_name_normalized' => $fieldName !== null ? Str::ascii(Str::lower($fieldName)) : null,
             'is_public' => $procedure->trangThai === null || $procedure->trangThai === 'Công khai',
             'updated_at' => now()->toIso8601String(),
         ];

@@ -5,6 +5,7 @@ namespace App\Services\Search;
 use App\Contracts\Search\ApplicationSearchGateway;
 use App\Models\HoSoXuLy;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class ApplicationSearchService
 {
@@ -16,6 +17,9 @@ class ApplicationSearchService
             return null;
         }
 
+        $search = trim($query);
+        $normalizedSearch = trim(Str::ascii(Str::lower($search))) ?: $search;
+
         try {
             $response = $this->gateway->search([
                 'size' => max(1, min($limit, 1000)),
@@ -24,16 +28,16 @@ class ApplicationSearchService
                     'bool' => [
                         'must' => [[
                             'multi_match' => [
-                                'query' => trim($query),
+                                'query' => $normalizedSearch,
                                 'type' => 'bool_prefix',
                                 'fields' => [
                                     'id',
-                                    'name',
-                                    'name._2gram',
-                                    'name._3gram',
+                                    'name_normalized',
+                                    'name_normalized._2gram',
+                                    'name_normalized._3gram',
                                     'email',
                                     'phone',
-                                    'procedure_name',
+                                    'procedure_name_normalized',
                                 ],
                             ],
                         ]],
@@ -129,12 +133,17 @@ class ApplicationSearchService
 
     private function document(HoSoXuLy $application): array
     {
+        $name = (string) $application->tenChuHoSo;
+        $procedureName = $application->tthc?->tenTTHC;
+
         return [
             'id' => (string) $application->getKey(),
-            'name' => (string) $application->tenChuHoSo,
+            'name' => $name,
+            'name_normalized' => Str::ascii(Str::lower($name)),
             'email' => (string) $application->email,
             'phone' => (string) $application->soDienThoai,
-            'procedure_name' => $application->tthc?->tenTTHC,
+            'procedure_name' => $procedureName,
+            'procedure_name_normalized' => $procedureName !== null ? Str::ascii(Str::lower($procedureName)) : null,
             'status_id' => $application->maTrangThai !== null ? (int) $application->maTrangThai : null,
             'citizen_id' => $application->IDCD !== null ? (int) $application->IDCD : null,
             'received_at' => $application->ngayTiepNhan?->toDateString(),

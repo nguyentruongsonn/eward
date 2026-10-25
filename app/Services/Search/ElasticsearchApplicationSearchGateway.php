@@ -21,8 +21,17 @@ class ElasticsearchApplicationSearchGateway implements ApplicationSearchGateway
     {
         $indices = $this->client->indices();
         $index = $this->indexName();
+        $normalizedProperties = [
+            'name_normalized' => ['type' => 'search_as_you_type'],
+            'procedure_name_normalized' => ['type' => 'text'],
+        ];
 
         if ($indices->exists(['index' => $index])->asBool()) {
+            $indices->putMapping([
+                'index' => $index,
+                'body' => ['properties' => $normalizedProperties],
+            ]);
+
             return;
         }
 
@@ -37,6 +46,7 @@ class ElasticsearchApplicationSearchGateway implements ApplicationSearchGateway
                     'properties' => [
                         'id' => ['type' => 'keyword'],
                         'name' => ['type' => 'search_as_you_type'],
+                        ...$normalizedProperties,
                         'email' => ['type' => 'keyword'],
                         'phone' => ['type' => 'keyword'],
                         'procedure_name' => ['type' => 'text'],
