@@ -2,21 +2,31 @@
 
 namespace App\Services\HoSo;
 
+use App\Contracts\Files\FileStorage;
 use App\Enums\HoSoStatus;
 use App\Exceptions\ApiException;
 use App\Models\CongDan;
 use App\Models\HoSoXuLy;
 use App\Models\Nguoi;
+use App\Models\TaiLieuNop;
 use App\Models\TrangThaiHoSo;
 use App\Models\TTHC;
+use App\Services\Files\ApplicationDocumentService;
 use App\Support\Idempotency;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class ApplicationSubmissionService
 {
-    public function __construct(private readonly Idempotency $idempotency) {}
+    public function __construct(
+        private readonly Idempotency $idempotency,
+        private readonly ApplicationDocumentService $documents,
+        private readonly FileStorage $storage,
+    ) {}
 
     /** @return Collection<int, TrangThaiHoSo> */
     public function statuses(): Collection
@@ -115,57 +125,187 @@ class ApplicationSubmissionService
 
     public function submit(Nguoi $user, array $data, ?string $idempotencyKey = null): HoSoXuLy
     {
-        $fingerprint = hash('sha256', serialize($data));
-        $application = $this->idempotency->rememberModel(
-            'application',
-            $user->getKey(),
-            $idempotencyKey,
-            $fingerprint,
-            fn (string|int $id): ?HoSoXuLy => HoSoXuLy::query()->find($id),
-            fn (): HoSoXuLy => DB::transaction(function () use ($user, $data): HoSoXuLy {
-                $procedure = TTHC::query()->findOrFail($data['procedure_id']);
-                if ($procedure->trangThai !== null && $procedure->trangThai !== 'Công khai') {
-                    throw new ApiException('Thủ tục hiện không công khai.', 'PROCEDURE_UNAVAILABLE', 409);
+        $files = array_values($data['documents'] ?? []);
+        $documentTypes = array_values($data['document_types'] ?? []);
+        $fingerprint = trim((string) $idempotencyKey) === ''
+            ? ''
+            : $this->submissionFingerprint($data, $files, $documentTypes);
+        $storedFiles = [];
+
+        try {
+            $application = $this->idempotency->rememberModel(
+                'application',
+                $user->getKey(),
+                $idempotencyKey,
+                $fingerprint,
+                fn (string|int $id): ?HoSoXuLy => HoSoXuLy::query()->find($id),
+                fn (): HoSoXuLy => DB::transaction(function () use ($user, $data, $files, $documentTypes, &$storedFiles): HoSoXuLy {
+                    $procedure = TTHC::query()->findOrFail($data['procedure_id']);
+                    if ($procedure->trangThai !== null && $procedure->trangThai !== 'Công khai') {
+                        throw new ApiException('Thủ tục hiện không công khai.', 'PROCEDURE_UNAVAILABLE', 409);
+                    }
+
+                    $this->validateSubmissionDocuments((int) $procedure->getKey(), $files, $documentTypes);
+                    $applicationData = $data['data'];
+                    $applicationData['attached_files'] = $this->attachedFileMetadata($files, $documentTypes);
+
+                    $citizen = $this->citizen($user);
+                    $fees = $this->calculateFees((int) $procedure->getKey(), $data['fee_items'] ?? []);
+                    $formId = DB::table('formtructuyen')->where('maTTHC', $procedure->getKey())->value('maForm');
+                    $paymentMethod = $data['payment_method'] ?? 'online';
+                    $initialStatus = (float) $fees['total'] > 0
+                        ? HoSoStatus::PendingPayment
+                        : HoSoStatus::PendingReception;
+
+                    $application = HoSoXuLy::create([
+                        'maTTHC' => $procedure->getKey(),
+                        'IDCD' => $citizen->getKey(),
+                        'maForm' => $formId,
+                        'tenChuHoSo' => $user->hoTen,
+                        'doiTuongThucHien' => null,
+                        'email' => $user->email,
+                        'soDienThoai' => substr((string) $user->soDienThoai, 0, 10),
+                        'dulieu' => [
+                            'payload' => $applicationData,
+                            'fee_items' => $fees['items'],
+                            'payment_method' => $paymentMethod,
+                        ],
+                        'ngayNop' => now(),
+                        'maTrangThai' => $initialStatus->value,
+                        'lePhi' => $fees['total'],
+                        'hinhThuc' => $data['delivery_method'] === 'direct' ? 'Nhận trực tiếp' : 'Nhận trực tuyến',
+                        'donViXuLy' => $procedure->coQuanThucHien ?: 'Bộ phận Một cửa',
+                        'ngayTiepNhan' => null,
+                        'ngayHenTra' => null,
+                        'ngayTra' => null,
+                        'hanBoSung' => null,
+                        'thongTinTra' => null,
+                        'ngayKetThucXuLy' => null,
+                        'ghiChu' => null,
+                    ]);
+
+                    foreach ($files as $index => $file) {
+                        $storedFiles[] = $this->documents->storeForDocumentType(
+                            $file,
+                            $application,
+                            (int) $documentTypes[$index],
+                            $user,
+                            $this->storage,
+                        );
+                    }
+
+                    return $application;
+                }),
+            );
+        } catch (Throwable $exception) {
+            $paths = [];
+            foreach ($storedFiles as $file) {
+                if (! TaiLieuNop::query()->whereKey($file->getKey())->exists() && $file->duongDan) {
+                    $paths[] = $file->duongDan;
                 }
+            }
 
-                $citizen = $this->citizen($user);
-                $fees = $this->calculateFees((int) $procedure->getKey(), $data['fee_items'] ?? []);
-                $formId = DB::table('formtructuyen')->where('maTTHC', $procedure->getKey())->value('maForm');
-                $paymentMethod = $data['payment_method'] ?? 'online';
-                $initialStatus = (float) $fees['total'] > 0
-                    ? HoSoStatus::PendingPayment
-                    : HoSoStatus::PendingReception;
+            if ($paths !== []) {
+                Storage::disk('local')->delete($paths);
+            }
 
-                return HoSoXuLy::create([
-                    'maTTHC' => $procedure->getKey(),
-                    'IDCD' => $citizen->getKey(),
-                    'maForm' => $formId,
-                    'tenChuHoSo' => $user->hoTen,
-                    'doiTuongThucHien' => null,
-                    'email' => $user->email,
-                    'soDienThoai' => substr((string) $user->soDienThoai, 0, 10),
-                    'dulieu' => [
-                        'payload' => $data['data'],
-                        'fee_items' => $fees['items'],
-                        'payment_method' => $paymentMethod,
-                    ],
-                    'ngayNop' => now(),
-                    'maTrangThai' => $initialStatus->value,
-                    'lePhi' => $fees['total'],
-                    'hinhThuc' => $data['delivery_method'] === 'direct' ? 'Nhận trực tiếp' : 'Nhận trực tuyến',
-                    'donViXuLy' => $procedure->coQuanThucHien ?: 'Bộ phận Một cửa',
-                    'ngayTiepNhan' => null,
-                    'ngayHenTra' => null,
-                    'ngayTra' => null,
-                    'hanBoSung' => null,
-                    'thongTinTra' => null,
-                    'ngayKetThucXuLy' => null,
-                    'ghiChu' => null,
-                ]);
-            }),
-        );
+            throw $exception;
+        }
 
-        return $application->load(['trangThai', 'tthc']);
+        return $application->load(['trangThai', 'tthc', 'files']);
+    }
+
+    /**
+     * @param  array<int, UploadedFile>  $files
+     * @param  array<int, int|string>  $documentTypes
+     */
+    private function validateSubmissionDocuments(int $procedureId, array $files, array $documentTypes): void
+    {
+        if (count($files) !== count($documentTypes)) {
+            throw new ApiException('Số loại giấy tờ phải khớp với số tệp tải lên.', 'APPLICATION_DOCUMENTS_MISMATCH', 422);
+        }
+
+        $documents = DB::table('thanhphanhoso')
+            ->join('thanhphangiayto', 'thanhphangiayto.maThanhPhan', '=', 'thanhphanhoso.maThanhPhan')
+            ->join('giayto', 'giayto.maGiayTo', '=', 'thanhphangiayto.maGiayTo')
+            ->where('thanhphanhoso.maTTHC', $procedureId)
+            ->select('giayto.maGiayTo', 'giayto.yeuCau')
+            ->distinct()
+            ->get();
+
+        $mappedIds = $documents->pluck('maGiayTo')->map(static fn ($id): int => (int) $id)->all();
+        $submittedIds = array_map('intval', $documentTypes);
+        $invalidIds = array_values(array_diff($submittedIds, $mappedIds));
+        if ($invalidIds !== []) {
+            throw new ApiException('Có giấy tờ không thuộc thành phần thủ tục.', 'APPLICATION_DOCUMENT_TYPE_INVALID', 422, [
+                'invalid_document_ids' => $invalidIds,
+            ]);
+        }
+
+        $requiredIds = $documents
+            ->where('yeuCau', 'Bắt buộc')
+            ->pluck('maGiayTo')
+            ->map(static fn ($id): int => (int) $id)
+            ->all();
+        $missingIds = array_values(array_diff($requiredIds, $submittedIds));
+        if ($missingIds !== []) {
+            throw new ApiException('Vui lòng tải lên đầy đủ giấy tờ bắt buộc của thủ tục.', 'APPLICATION_DOCUMENTS_INCOMPLETE', 422, [
+                'missing_document_ids' => $missingIds,
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<int, UploadedFile>  $files
+     * @param  array<int, int|string>  $documentTypes
+     */
+    private function submissionFingerprint(array $data, array $files, array $documentTypes): string
+    {
+        unset($data['documents'], $data['document_types']);
+        $fileFingerprints = [];
+
+        foreach ($files as $index => $file) {
+            $hash = hash_file('sha256', $file->getPathname());
+            if ($hash === false) {
+                throw new ApiException('Không thể đọc tệp tải lên.', 'APPLICATION_FILE_READ_FAILED', 422);
+            }
+
+            $fileFingerprints[] = [
+                'document_type' => (int) ($documentTypes[$index] ?? 0),
+                'sha256' => $hash,
+            ];
+        }
+
+        return hash('sha256', serialize([$data, $fileFingerprints]));
+    }
+
+    /**
+     * @param  array<int, UploadedFile>  $files
+     * @param  array<int, int|string>  $documentTypes
+     * @return array<int, array<string, int|string>>
+     */
+    private function attachedFileMetadata(array $files, array $documentTypes): array
+    {
+        $names = DB::table('giayto')
+            ->whereIn('maGiayTo', array_map('intval', $documentTypes))
+            ->pluck('tenGiayTo', 'maGiayTo');
+        $metadata = [];
+
+        foreach ($files as $index => $file) {
+            $documentType = (int) $documentTypes[$index];
+            $fileName = basename($file->getClientOriginalName());
+            $fileName = preg_replace('/[^A-Za-z0-9._ -]+/', '_', $fileName) ?: 'document';
+
+            $metadata[] = [
+                'document_id' => $documentType,
+                'document_name' => (string) ($names[$documentType] ?? ''),
+                'file_name' => $fileName,
+                'file_size' => (int) round($file->getSize() / 1024).' KB',
+                'file_type' => $file->getMimeType() ?: 'application/octet-stream',
+            ];
+        }
+
+        return $metadata;
     }
 
     private function citizen(Nguoi $user): CongDan

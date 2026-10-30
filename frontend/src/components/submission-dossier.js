@@ -11,10 +11,17 @@ export function createSubmissionDossier(components = []) {
   });
 
   if (flatDocuments.length === 0) {
-    flatDocuments.push(
-      { id: 'default_1', name: 'Giấy tờ tùy thân (CCCD / Hộ chiếu)', type: 'Giấy tờ tùy thân', required: 'Bắt buộc', original_copies: 1, duplicate_copies: 0 },
-      { id: 'default_2', name: 'Đơn / Giấy tờ chứng minh nội dung yêu cầu', type: 'Tờ khai', required: 'Không bắt buộc', original_copies: 1, duplicate_copies: 0 }
-    );
+    const notice = el('div', {
+      class: 'card',
+      style: 'padding: 1rem; border: 1px solid #d0d7de; border-radius: 4px; color: #475569;',
+    }, 'Thủ tục này chưa khai báo giấy tờ cần đính kèm trực tuyến.');
+    container.append(notice);
+
+    return {
+      element: container,
+      getAttachedFiles: () => [],
+      validate: () => ({ valid: true }),
+    };
   }
 
   const docRegistry = [];
@@ -38,7 +45,7 @@ export function createSubmissionDossier(components = []) {
 
   flatDocuments.forEach((doc, idx) => {
     const isRequired = doc.required === 'Bắt buộc' || doc.required === true;
-    const fileInput = el('input', { type: 'file', accept: '.pdf,.jpg,.jpeg,.png,.doc,.docx', style: 'display: none;' });
+    const fileInput = el('input', { type: 'file', accept: '.pdf,.jpg,.jpeg,.png', style: 'display: none;' });
 
     const fileStatus = el('div', {
       style: 'display: none; font-size: 11.5px; color: #0f172a; margin-top: 0.35rem; word-break: break-all; text-align: left;',
@@ -52,10 +59,26 @@ export function createSubmissionDossier(components = []) {
     }, 'Chọn tệp');
 
     let currentFile = null;
+    let selectionError = '';
 
     fileInput.addEventListener('change', () => {
       if (fileInput.files && fileInput.files[0]) {
         const file = fileInput.files[0];
+        const isAllowedType = /\.(pdf|jpe?g|png)$/i.test(file.name);
+        if (!isAllowedType || file.size > 10 * 1024 * 1024) {
+          selectionError = !isAllowedType
+            ? 'Chỉ nhận tệp PDF, JPG hoặc PNG.'
+            : 'Kích thước tệp tối đa là 10 MB.';
+          currentFile = null;
+          fileInput.value = '';
+          fileStatus.textContent = selectionError;
+          fileStatus.style.color = '#b91c1c';
+          fileStatus.style.display = 'block';
+          uploadBtn.textContent = 'Chọn tệp';
+          return;
+        }
+
+        selectionError = '';
         const sizeKb = Math.round(file.size / 1024);
         currentFile = {
           document_id: doc.id,
@@ -63,6 +86,7 @@ export function createSubmissionDossier(components = []) {
           file_name: file.name,
           file_size: `${sizeKb} KB`,
           file_type: file.type,
+          file,
         };
 
         fileStatus.replaceChildren(
@@ -75,17 +99,19 @@ export function createSubmissionDossier(components = []) {
             onClick: () => {
               fileInput.value = '';
               currentFile = null;
+              selectionError = '';
               fileStatus.style.display = 'none';
               uploadBtn.textContent = 'Chọn tệp';
             },
           }, '✕')
         );
+        fileStatus.style.color = '#0f172a';
         fileStatus.style.display = 'block';
         uploadBtn.textContent = 'Đổi tệp';
       }
     });
 
-    docRegistry.push({ doc, isRequired, getFile: () => currentFile });
+    docRegistry.push({ doc, isRequired, getFile: () => currentFile, getError: () => selectionError });
 
     const copiesText = `Bản chính: ${doc.original_copies || 0} • Bản sao: ${doc.duplicate_copies || 0}`;
 
@@ -137,8 +163,14 @@ export function createSubmissionDossier(components = []) {
     },
     validate: () => {
       for (const item of docRegistry) {
+        if (item.getError()) {
+          return { valid: false, message: item.getError() };
+        }
         if (item.isRequired && !item.getFile()) {
           return { valid: false, message: `Vui lòng đính kèm tệp cho giấy tờ bắt buộc: "${item.doc.name}"` };
+        }
+        if (item.getFile() && (!Number.isInteger(Number(item.doc.id)) || Number(item.doc.id) < 1)) {
+          return { valid: false, message: `Không xác định được loại giấy tờ "${item.doc.name}" của thủ tục.` };
         }
       }
       return { valid: true };

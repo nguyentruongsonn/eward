@@ -70,6 +70,7 @@ export function renderSubmitApplicationPage({ params, searchParams, navigate }) 
     let step1Data = {};
     let step2Files = [];
     let step3Data = {};
+    let submissionIdempotencyKey = null;
 
     const stepsInfo = [
       { num: 1, title: 'Điền thông tin hồ sơ' },
@@ -84,6 +85,8 @@ export function renderSubmitApplicationPage({ params, searchParams, navigate }) 
     });
 
     const errorAlert = el('div', {
+      role: 'alert',
+      tabindex: '-1',
       style: 'display: none; padding: 0.75rem 1rem; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 4px; font-size: 13px; margin-bottom: 1rem;',
     });
 
@@ -146,6 +149,7 @@ export function renderSubmitApplicationPage({ params, searchParams, navigate }) 
         if (!val.valid) {
           errorAlert.textContent = val.message;
           errorAlert.style.display = 'block';
+          errorAlert.focus();
           window.scrollTo({ top: container.offsetTop, behavior: 'smooth' });
           return;
         }
@@ -156,6 +160,7 @@ export function renderSubmitApplicationPage({ params, searchParams, navigate }) 
         if (!val.valid) {
           errorAlert.textContent = val.message;
           errorAlert.style.display = 'block';
+          errorAlert.focus();
           window.scrollTo({ top: container.offsetTop, behavior: 'smooth' });
           return;
         }
@@ -169,11 +174,12 @@ export function renderSubmitApplicationPage({ params, searchParams, navigate }) 
         if (!review || !review.isConfirmed()) {
           errorAlert.textContent = 'Quý công dân vui lòng tích chọn ô "Cam đoan trách nhiệm pháp lý" trước khi gửi hồ sơ.';
           errorAlert.style.display = 'block';
+          errorAlert.focus();
           return;
         }
 
         nextBtn.disabled = true;
-        nextBtn.textContent = 'Đang xử lý nộp hồ sơ...';
+        nextBtn.textContent = 'Đang tải tệp và nộp hồ sơ...';
 
         const applicantName = step1Data.ho_ten || step1Data.full_name || user.full_name || user.hoTen || 'Công dân';
         const applicantPhone = step1Data.so_dien_thoai || step1Data.phone || user.phone || '';
@@ -186,7 +192,7 @@ export function renderSubmitApplicationPage({ params, searchParams, navigate }) 
             full_name: applicantName,
             citizen_id: applicantCccd,
             phone: applicantPhone,
-            attached_files: step2Files,
+            attached_files: step2Files.map(({ file, ...metadata }) => metadata),
             delivery_method: step3Data.delivery_method,
             payment_method: step3Data.payment_method,
           },
@@ -195,12 +201,28 @@ export function renderSubmitApplicationPage({ params, searchParams, navigate }) 
           fee_items: step3Data.fee_items || [],
         };
 
+        const formData = new FormData();
+        formData.append('procedure_id', String(payload.procedure_id));
+        formData.append('data', JSON.stringify(payload.data));
+        formData.append('delivery_method', payload.delivery_method);
+        formData.append('payment_method', payload.payment_method);
+        formData.append('fee_items', JSON.stringify(payload.fee_items));
+        step2Files.forEach(({ document_id, file }) => {
+          formData.append('documents[]', file, file.name);
+          formData.append('document_types[]', String(document_id));
+        });
+        submissionIdempotencyKey ||= globalThis.crypto?.randomUUID?.()
+          || `submission-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
         try {
-          const res = await api.post('/citizen/applications', payload);
+          const res = await api.post('/citizen/applications', formData, {
+            headers: { 'Idempotency-Key': submissionIdempotencyKey },
+          });
           renderSuccessReceipt(res.data || res, applicantPhone, step3Data.payment_method);
         } catch (err) {
           errorAlert.textContent = err.message || 'Không thể gửi hồ sơ. Vui lòng kiểm tra lại thông tin.';
           errorAlert.style.display = 'block';
+          errorAlert.focus();
           nextBtn.disabled = false;
           nextBtn.textContent = 'Xác nhận nộp hồ sơ chính thức ✓';
         }
