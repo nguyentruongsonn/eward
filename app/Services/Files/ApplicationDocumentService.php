@@ -124,7 +124,7 @@ class ApplicationDocumentService
             $stored = $this->storeForDocumentType($file, $locked, $documentType, $actor, $storage);
 
             foreach ($existing as $oldFile) {
-                Storage::disk('local')->delete($oldFile->duongDan);
+                Storage::disk(config('filesystems.private_disk', 'local'))->delete($oldFile->duongDan);
                 $oldFile->delete();
             }
 

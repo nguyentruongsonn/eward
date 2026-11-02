@@ -13,12 +13,17 @@ use Illuminate\Support\Str;
 
 class PrivateFileStorage implements FileStorage
 {
+    private function disk(): \Illuminate\Contracts\Filesystem\Filesystem
+    {
+        return Storage::disk(config('filesystems.private_disk', 'local'));
+    }
+
     public function storeApplicationFile(UploadedFile $file, HoSoXuLy $application, int $documentType, Nguoi $actor): TaiLieuNop
     {
         $extension = strtolower($file->extension());
         $safeName = Str::uuid()->toString().'.'.$extension;
         $directory = 'applications/'.$application->getKey();
-        $path = Storage::disk('local')->putFileAs($directory, $file, $safeName);
+        $path = $this->disk()->putFileAs($directory, $file, $safeName);
 
         try {
             return DB::transaction(fn (): TaiLieuNop => TaiLieuNop::create([
@@ -31,16 +36,16 @@ class PrivateFileStorage implements FileStorage
                 'ngayTai' => now(),
             ]));
         } catch (\Throwable $exception) {
-            Storage::disk('local')->delete($path);
+            $this->disk()->delete($path);
             throw $exception;
         }
     }
 
     public function download(TaiLieuNop $file): mixed
     {
-        abort_unless(Storage::disk('local')->exists($file->duongDan), 404);
+        abort_unless($this->disk()->exists($file->duongDan), 404);
 
-        return Storage::disk('local')->download(
+        return $this->disk()->download(
             $file->duongDan,
             $file->tenTep,
             ['Content-Type' => $file->dinhDang ?: 'application/octet-stream'],

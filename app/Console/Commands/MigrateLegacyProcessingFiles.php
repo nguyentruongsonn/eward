@@ -16,7 +16,7 @@ class MigrateLegacyProcessingFiles extends Command
 
     public function handle(): int
     {
-        $private = Storage::disk('local');
+        $private = Storage::disk(config('filesystems.private_disk', 'local'));
         $public = Storage::disk('public');
         $moved = 0;
         $alreadyPrivate = 0;
@@ -104,7 +104,7 @@ class MigrateLegacyProcessingFiles extends Command
             return false;
         }
 
-        $private = Storage::disk('local');
+        $private = Storage::disk(config('filesystems.private_disk', 'local'));
         if (! $private->exists($relativePath) || $this->sha256($private, $relativePath) !== $this->sha256($public, $relativePath)) {
             throw new \RuntimeException('Nội dung file private không khớp file public.');
         }

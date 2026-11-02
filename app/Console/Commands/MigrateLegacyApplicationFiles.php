@@ -16,7 +16,7 @@ class MigrateLegacyApplicationFiles extends Command
 
     public function handle(): int
     {
-        $private = Storage::disk('local');
+        $private = Storage::disk(config('filesystems.private_disk', 'local'));
         $public = Storage::disk('public');
         $moved = 0;
         $alreadyPrivate = 0;

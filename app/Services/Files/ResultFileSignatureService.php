@@ -11,13 +11,18 @@ use Illuminate\Support\Facades\Storage;
 
 class ResultFileSignatureService
 {
+    private function disk(): \Illuminate\Contracts\Filesystem\Filesystem
+    {
+        return Storage::disk(config('filesystems.private_disk', 'local'));
+    }
+
     public function sign(HoSoXuLy $application, HoSoResultFile $file, Nguoi $actor, ?string $note = null): HoSoXuLy
     {
-        if (! Storage::disk('local')->exists($file->path)) {
+        if (! $this->disk()->exists($file->path)) {
             throw new ApiException('Không tìm thấy file kết quả.', 'RESULT_FILE_NOT_FOUND', 404);
         }
 
-        $hash = hash('sha256', Storage::disk('local')->get($file->path));
+        $hash = hash('sha256', $this->disk()->get($file->path));
         $note = trim((string) $note);
 
         return DB::transaction(function () use ($application, $file, $actor, $hash, $note): HoSoXuLy {

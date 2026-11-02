@@ -14,10 +14,15 @@ use Illuminate\Support\Str;
 
 class ApplicationOpinionFileService
 {
+    private function disk(): \Illuminate\Contracts\Filesystem\Filesystem
+    {
+        return Storage::disk(config('filesystems.private_disk', 'local'));
+    }
+
     public function upload(HoSoXuLy $application, Nguoi $actor, UploadedFile $file): HoSoOpinionFile
     {
         $extension = strtolower($file->extension());
-        $path = Storage::disk('local')->putFileAs(
+        $path = $this->disk()->putFileAs(
             'applications/'.$application->getKey().'/opinions',
             $file,
             Str::uuid()->toString().'.'.$extension,
@@ -37,7 +42,7 @@ class ApplicationOpinionFileService
                 'uploaded_by' => $actor->getKey(),
             ]));
         } catch (\Throwable $exception) {
-            Storage::disk('local')->delete($path);
+            $this->disk()->delete($path);
             throw $exception;
         }
     }
@@ -61,9 +66,9 @@ class ApplicationOpinionFileService
 
     public function download(HoSoOpinionFile $file): mixed
     {
-        abort_unless(Storage::disk('local')->exists($file->path), 404);
+        abort_unless($this->disk()->exists($file->path), 404);
 
-        return Storage::disk('local')->download(
+        return $this->disk()->download(
             $file->path,
             $file->original_name,
             ['Content-Type' => $file->mime_type ?: 'application/octet-stream'],
@@ -80,7 +85,7 @@ class ApplicationOpinionFileService
             return $path;
         });
 
-        Storage::disk('local')->delete($path);
+        $this->disk()->delete($path);
     }
 
     private function safeOriginalName(string $name): string
