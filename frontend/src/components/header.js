@@ -1,6 +1,6 @@
 import { el } from './dom.js';
 import { openAuthModal } from './auth-modal.js';
-import { api, getAuthToken, getStoredUser, clearAuthToken, setStoredUser } from '../api/client.js';
+import { api, getAuthToken, getStoredUser, clearAuthToken, logoutSession, setStoredUser } from '../api/client.js';
 
 export function renderHeader({ navigate }) {
   const emblemSvg = el('div', {
@@ -78,8 +78,8 @@ export function renderHeader({ navigate }) {
         el('button', {
           type: 'button',
           style: 'width: 100%; text-align: left; padding: 0.5rem 0.85rem; background: transparent; border: none; font-size: 12.5px; color: #b91c1c; font-weight: 700; cursor: pointer;',
-          onClick: () => {
-            clearAuthToken();
+          onClick: async () => {
+            await logoutSession();
             window.dispatchEvent(new CustomEvent('auth:change', { detail: null }));
             window.location.reload();
           },
@@ -160,26 +160,22 @@ export function renderHeader({ navigate }) {
       el('div', { class: 'nav-links', style: 'display: flex; gap: 0.35rem; padding: 0.35rem 0;' }, [
         el('a', {
           href: '/',
-          class: 'nav-link active',
-          style: 'font-size: 13px; font-weight: 700; padding: 0.45rem 1rem; border-radius: 4px; color: #004b87; background: #ffffff; text-decoration: none;',
+          class: 'nav-link',
           onClick: (e) => { e.preventDefault(); navigate('/'); },
         }, 'Trang chủ'),
         el('a', {
           href: '/thu-tuc',
           class: 'nav-link',
-          style: 'font-size: 13px; font-weight: 600; padding: 0.45rem 1rem; border-radius: 4px; color: rgba(255,255,255,0.9); text-decoration: none;',
           onClick: (e) => { e.preventDefault(); navigate('/thu-tuc'); },
         }, 'Thủ tục hành chính'),
         el('a', {
           href: '/tra-cuu',
           class: 'nav-link',
-          style: 'font-size: 13px; font-weight: 600; padding: 0.45rem 1rem; border-radius: 4px; color: rgba(255,255,255,0.9); text-decoration: none;',
           onClick: (e) => { e.preventDefault(); navigate('/tra-cuu'); },
         }, 'Tra cứu tiến độ hồ sơ'),
         el('a', {
           href: '/phan-anh',
           class: 'nav-link',
-          style: 'font-size: 13px; font-weight: 600; padding: 0.45rem 1rem; border-radius: 4px; color: rgba(255,255,255,0.9); text-decoration: none;',
           onClick: (e) => { e.preventDefault(); navigate('/phan-anh'); },
         }, 'Phản ánh kiến nghị'),
       ]),

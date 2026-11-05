@@ -1,5 +1,5 @@
 import { el } from '../components/dom.js';
-import { getAuthToken, getStoredUser, clearAuthToken } from '../api/client.js';
+import { getAuthToken, getStoredUser, logoutSession } from '../api/client.js';
 import { openAuthModal } from '../components/auth-modal.js';
 import { createProfileAccountTab } from '../components/profile-account-tab.js';
 import { createProfileApplicationsTab } from '../components/profile-applications-tab.js';
@@ -104,8 +104,8 @@ export function renderProfilePage({ navigate, searchParams }) {
     const logoutBtn = el('button', {
       type: 'button',
       style: 'width: 100%; text-align: left; display: flex; align-items: center; gap: 0.65rem; padding: 0.65rem 0.85rem; border-radius: 6px; font-size: 13px; font-weight: 600; color: #dc2626; background: transparent; border: none; cursor: pointer; margin-top: 0.75rem; border-top: 1px solid #f1f5f9; padding-top: 0.85rem;',
-      onClick: () => {
-        clearAuthToken();
+      onClick: async () => {
+        await logoutSession();
         window.dispatchEvent(new CustomEvent('auth:change', { detail: null }));
         navigate('/');
       },

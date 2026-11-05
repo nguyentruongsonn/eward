@@ -45,7 +45,7 @@ cd frontend
 npm run dev
 ```
 
-Đặt `VITE_API_BASE_URL` khi cần trỏ frontend đến một API khác; mặc định là proxy qua Laravel tại `http://127.0.0.1:8001/api/v1`.
+Đặt `VITE_API_BASE_URL` khi cần trỏ frontend đến một API khác; mặc định là proxy qua Laravel tại `http://127.0.0.1:8000/api/v1`.
 
 Tạo artifact tĩnh và chạy kiểm thử frontend bằng:
 
@@ -57,7 +57,7 @@ npm --prefix frontend test
 ## REST API v1
 
 - Public: `GET /api/v1/public/procedures`, `GET /api/v1/public/fields`, `GET /api/v1/public/provinces`, `GET /api/v1/public/provinces/{id}/wards`, `POST /api/v1/public/chat`; chi tiết thủ tục trả phương thức, thành phần hồ sơ, giấy tờ, lệ phí và cấu hình form.
-- Auth: `POST /api/v1/auth/register`, `POST /api/v1/auth/register/verify-otp`, `POST /api/v1/auth/login`, `GET /api/v1/auth/me`
+- Auth: `POST /api/v1/auth/register`, `POST /api/v1/auth/register/verify-otp`, `POST /api/v1/auth/login`, `GET /api/v1/auth/me`. Đăng nhập và xác thực OTP cấp access JWT và refresh JWT riêng; refresh token được xoay khi gọi `POST /api/v1/auth/refresh`, còn API có xác thực chỉ nhận access token.
 - Citizen: hồ sơ, rút hồ sơ, bổ sung file, đánh giá dịch vụ, lịch hẹn, thông báo, lịch sử thanh toán, hóa đơn và file kết quả sau khi trả hồ sơ
 - Staff/admin: danh sách hồ sơ phân trang, chuyển trạng thái theo state machine, ghi chú, lịch sử email, yêu cầu bổ sung, file kết quả, báo cáo, check-in và quản lý tài khoản
 - Staff management: quản lý cán bộ và phân công quầy làm việc qua `/api/v1/admin/staff`

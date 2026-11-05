@@ -20,13 +20,13 @@ export function renderHomeFields({ navigate }) {
   function renderCards(fieldsList) {
     const cards = fieldsList.map(f => el('div', {
       class: 'card',
-      style: 'padding: 1.25rem; display: flex; flex-direction: column; cursor: pointer; min-height: 100px; background: #ffffff; border: 1px solid #d0d7de; border-radius: 4px; transition: border-color 0.15s, box-shadow 0.15s;',
+      style: 'padding: 1.25rem; display: flex; flex-direction: column; cursor: pointer; min-height: 100px; background: #ffffff; border: none; border-radius: 6px; transition: box-shadow 0.15s;',
       onClick: () => navigate(`/thu-tuc?field_id=${f.id}`),
     }, [
       el('div', { style: 'display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.5rem;' }, [
         el('h3', { style: 'font-family: var(--font-heading); font-size: 15px; font-weight: 700; color: #004482; margin: 0;' }, f.name),
         el('span', {
-          style: 'font-size: 11px; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 3px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; white-space: nowrap;',
+          style: 'font-size: 11px; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 5px; border: none; background: #f8fafc; color: #334155; white-space: nowrap;',
         }, String(f.count)),
       ]),
       el('p', { style: 'font-size: 12.5px; color: #475569; line-height: 1.5; margin: 0;' }, f.desc),

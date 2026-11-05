@@ -87,15 +87,15 @@ export function renderHomePopularProcedures({ navigate }) {
 
     const items = filtered.map(p => el('div', {
       class: 'card',
-      style: 'padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; background: #ffffff; border: 1px solid #d0d7de; border-radius: 4px;',
+      style: 'padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; background: #ffffff; border: none; border-radius: 6px;',
     }, [
       el('div', { style: 'flex: 1; min-width: 320px;' }, [
         el('div', { style: 'display: flex; gap: 0.4rem; margin-bottom: 0.35rem; flex-wrap: wrap; align-items: center;' }, [
           el('span', {
-            style: 'font-size: 10.5px; font-weight: 700; color: #1e293b; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 0.1rem 0.45rem; border-radius: 3px;',
+            style: 'font-size: 10.5px; font-weight: 700; color: #1e293b; background: #f1f5f9; border: none; padding: 0.1rem 0.45rem; border-radius: 5px;',
           }, p.dept),
           el('span', {
-            style: 'font-size: 10.5px; font-weight: 600; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; padding: 0.1rem 0.45rem; border-radius: 3px;',
+            style: 'font-size: 10.5px; font-weight: 600; color: #475569; background: #f8fafc; border: none; padding: 0.1rem 0.45rem; border-radius: 5px;',
           }, p.level),
         ]),
         el('h3', {

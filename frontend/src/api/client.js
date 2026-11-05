@@ -1,4 +1,4 @@
-const BASE_URL = '/api/v1';
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/+$/, '');
 const ACCESS_TOKEN_KEY = 'eward_access_token';
 const REFRESH_TOKEN_KEY = 'eward_refresh_token';
 const USER_KEY = 'eward_user';
@@ -19,11 +19,14 @@ export function setAuthTokens(accessToken, refreshToken = null) {
   if (refreshToken) {
     localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
     sessionStorage.removeItem('eward_refresh_token');
+  } else {
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    sessionStorage.removeItem('eward_refresh_token');
   }
 }
 
 export function setAuthToken(token) {
-  setAuthTokens(token, token);
+  setAuthTokens(token);
 }
 
 export function clearAuthToken() {
@@ -73,12 +76,13 @@ function tryRefreshToken() {
       if (!res.ok) throw new Error('Refresh failed');
       const data = await res.json();
       const newAccessToken = data.data?.access_token || data.access_token;
-      const newRefreshToken = data.data?.refresh_token || data.refresh_token || newAccessToken;
-      if (newAccessToken) {
+      const newRefreshToken = data.data?.refresh_token || data.refresh_token;
+      if (newAccessToken && newRefreshToken) {
         setAuthTokens(newAccessToken, newRefreshToken);
         if (data.data?.user) setStoredUser(data.data.user);
         return newAccessToken;
       }
+      throw new Error('Refresh response did not include both tokens');
     } catch (_) {
       clearAuthToken();
       window.dispatchEvent(new CustomEvent('auth:change', { detail: null }));
@@ -118,6 +122,11 @@ export async function request(endpoint, options = {}) {
       const newToken = await tryRefreshToken();
       if (newToken) {
         headers.Authorization = `Bearer ${newToken}`;
+        if (endpoint.includes('/auth/logout') && typeof options.body === 'string') {
+          const logoutPayload = JSON.parse(options.body);
+          logoutPayload.refresh_token = getRefreshToken();
+          options.body = JSON.stringify(logoutPayload);
+        }
         response = await fetch(url, { ...options, headers });
       }
     }
@@ -154,3 +163,14 @@ export const api = {
   patch: (url, body, options) => request(url, { method: 'PATCH', body, ...options }),
   delete: (url, options) => request(url, { method: 'DELETE', ...options }),
 };
+
+export async function logoutSession() {
+  const refreshToken = getRefreshToken();
+
+  try {
+    if (getAuthToken()) await api.post('/auth/logout', { refresh_token: refreshToken });
+  } catch (_) {
+  } finally {
+    clearAuthToken();
+  }
+}

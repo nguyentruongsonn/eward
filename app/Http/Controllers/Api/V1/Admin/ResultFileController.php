@@ -74,6 +74,6 @@ class ResultFileController extends Controller
         $resultFile = $this->files->findForApplication($item, $file);
         $updated = $this->signatures->sign($item, $resultFile, $request->user('api'), $request->input('note'));
 
-        return ApiResponse::success(new \App\Http\Resources\Api\V1\AdminApplicationResource($updated), 'Đã xác nhận file kết quả bằng SHA-256.', 200, $request);
+        return ApiResponse::success(new \App\Http\Resources\Api\V1\AdminApplicationResource($updated), 'Đã ký số file kết quả.', 200, $request);
     }
 }

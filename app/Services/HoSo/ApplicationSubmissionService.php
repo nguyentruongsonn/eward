@@ -206,7 +206,7 @@ class ApplicationSubmissionService
             }
 
             if ($paths !== []) {
-                Storage::disk('local')->delete($paths);
+                Storage::disk(config('filesystems.private_disk', 'local'))->delete($paths);
             }
 
             throw $exception;

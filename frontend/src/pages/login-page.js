@@ -9,7 +9,7 @@ export function renderLoginPage({ navigate }) {
   });
 
   const emailInput = el('input', {
-    type: 'email',
+    type: 'text',
     class: 'input',
     id: 'login-email',
     placeholder: 'name@example.com hoặc số CCCD',
@@ -36,7 +36,7 @@ export function renderLoginPage({ navigate }) {
 
   const handleLoginSuccess = (res) => {
     const token = res.data?.access_token || res.data?.token || res.access_token || res.token;
-    const refreshToken = res.data?.refresh_token || res.refresh_token || token;
+    const refreshToken = res.data?.refresh_token || res.refresh_token;
     if (token) {
       setAuthTokens(token, refreshToken);
       if (res.data?.user) setStoredUser(res.data.user);

@@ -68,17 +68,15 @@ export function renderHomeHero({ navigate }) {
 
   const quickElements = keywords.map(tag => el('button', {
     type: 'button',
-    style: 'color: #004b87; font-size: 12px; font-weight: 600; background: #ffffff; border: 1px solid #cbd5e1; padding: 0.25rem 0.65rem; border-radius: 4px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.06); transition: all 0.15s ease;',
+    style: 'color: #004b87; font-size: 12px; font-weight: 600; background: #ffffff; border: none; padding: 0.25rem 0.65rem; border-radius: 5px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.06); transition: all 0.15s ease;',
     onClick: () => {
       searchInput.value = tag;
       handleSearch();
     },
     onMouseenter: (e) => {
-      e.currentTarget.style.borderColor = '#004b87';
       e.currentTarget.style.background = '#f0f7ff';
     },
     onMouseleave: (e) => {
-      e.currentTarget.style.borderColor = '#cbd5e1';
       e.currentTarget.style.background = '#ffffff';
     },
   }, tag));

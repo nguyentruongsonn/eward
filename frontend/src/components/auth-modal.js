@@ -44,7 +44,7 @@ export function openAuthModal(defaultTab = 'login', onAuthSuccess) {
 
   const handleAuthComplete = (res) => {
     const token = res.data?.access_token || res.data?.token || res.access_token || res.token;
-    const refreshToken = res.data?.refresh_token || res.refresh_token || token;
+    const refreshToken = res.data?.refresh_token || res.refresh_token;
     if (token) {
       setAuthTokens(token, refreshToken);
       if (res.data?.user) setStoredUser(res.data.user);
@@ -76,7 +76,7 @@ export function openAuthModal(defaultTab = 'login', onAuthSuccess) {
     otp.show(flow, email);
   };
 
-  const loginEmail = el('input', { type: 'text', class: 'input', placeholder: 'Email hoặc Số CCCD...', required: true });
+  const loginIdentifier = el('input', { type: 'text', class: 'input', placeholder: 'Email hoặc Số CCCD...', required: true });
   const loginPass = el('input', { type: 'password', class: 'input', placeholder: 'Mật khẩu...', required: true });
   const loginBtn = el('button', { type: 'submit', class: 'btn btn-primary', style: 'width: 100%; height: 42px; margin-top: 0.5rem;' }, 'Đăng nhập');
 
@@ -90,11 +90,11 @@ export function openAuthModal(defaultTab = 'login', onAuthSuccess) {
 
       try {
         const res = await api.post('/auth/login', {
-          email: loginEmail.value.trim(),
+          identifier: loginIdentifier.value.trim(),
           password: loginPass.value,
         });
         if (res.data?.verification_required || res.verification_required) {
-          const email = res.data?.email || res.email || loginEmail.value.trim();
+          const email = res.data?.email || res.email || loginIdentifier.value.trim();
           showToast.success('Mã OTP đã gửi về email. Vui lòng kiểm tra!');
           showOtpScreen('login', email);
           return;
@@ -111,7 +111,7 @@ export function openAuthModal(defaultTab = 'login', onAuthSuccess) {
       }
     },
   }, [
-    el('div', {}, [el('label', { style: 'display: block; font-size: 12px; font-weight: 700; margin-bottom: 0.25rem;' }, 'TÀI KHOẢN (EMAIL / CCCD): *'), loginEmail]),
+    el('div', {}, [el('label', { style: 'display: block; font-size: 12px; font-weight: 700; margin-bottom: 0.25rem;' }, 'TÀI KHOẢN (EMAIL / CCCD): *'), loginIdentifier]),
     el('div', {}, [el('label', { style: 'display: block; font-size: 12px; font-weight: 700; margin-bottom: 0.25rem;' }, 'MẬT KHẨU: *'), loginPass]),
     loginBtn,
   ]);
@@ -121,6 +121,7 @@ export function openAuthModal(defaultTab = 'login', onAuthSuccess) {
   const regPhone = el('input', { type: 'tel', class: 'input numeric-data', placeholder: 'Số điện thoại liên hệ...', required: true });
   const regEmail = el('input', { type: 'email', class: 'input', placeholder: 'Địa chỉ email...', required: true });
   const regPass = el('input', { type: 'password', class: 'input', placeholder: 'Mật khẩu...', required: true });
+  const regPassConfirmation = el('input', { type: 'password', class: 'input', placeholder: 'Nhập lại mật khẩu...', required: true });
   const regBtn = el('button', { type: 'submit', class: 'btn btn-primary', style: 'width: 100%; height: 42px; margin-top: 0.5rem;' }, 'Đăng ký tài khoản');
 
   const registerForm = el('form', {
@@ -133,11 +134,12 @@ export function openAuthModal(defaultTab = 'login', onAuthSuccess) {
 
       try {
         const res = await api.post('/auth/register', {
-          name: regName.value.trim(),
-          so_cccd: regCccd.value.trim(),
-          so_dien_thoai: regPhone.value.trim(),
+          full_name: regName.value.trim(),
+          citizen_id: regCccd.value.trim(),
+          phone: regPhone.value.trim(),
           email: regEmail.value.trim(),
           password: regPass.value,
+          password_confirmation: regPassConfirmation.value,
         });
         const targetEmail = res.data?.email || res.email || regEmail.value.trim();
         showToast.success('Mã OTP đã gửi về email. Vui lòng xác thực!');
@@ -160,6 +162,7 @@ export function openAuthModal(defaultTab = 'login', onAuthSuccess) {
     ]),
     el('div', {}, [el('label', { style: 'display: block; font-size: 11px; font-weight: 700; margin-bottom: 0.2rem;' }, 'EMAIL: *'), regEmail]),
     el('div', {}, [el('label', { style: 'display: block; font-size: 11px; font-weight: 700; margin-bottom: 0.2rem;' }, 'MẬT KHẨU: *'), regPass]),
+    el('div', {}, [el('label', { style: 'display: block; font-size: 11px; font-weight: 700; margin-bottom: 0.2rem;' }, 'XÁC NHẬN MẬT KHẨU: *'), regPassConfirmation]),
     regBtn,
   ]);
 
@@ -221,5 +224,5 @@ export function openAuthModal(defaultTab = 'login', onAuthSuccess) {
   }, modalBox);
 
   document.body.appendChild(modalInstance);
-  if (activeTab === 'login') loginEmail.focus(); else regName.focus();
+  if (activeTab === 'login') loginIdentifier.focus(); else regName.focus();
 }

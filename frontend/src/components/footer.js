@@ -26,7 +26,7 @@ export function renderFooter() {
   const col3 = el('div', { class: 'footer-col' }, [
     el('h4', { style: 'font-size: 12px; font-weight: 700; color: #0f172a; text-transform: uppercase; margin-bottom: 0.75rem;' }, 'Hỗ trợ & Tra cứu'),
     el('div', {
-      style: 'background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem;',
+      style: 'background: #f8fafc; border: none; border-radius: 6px; padding: 1rem;',
     }, [
       el('div', { style: 'font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase;' }, 'ĐƯỜNG DÂY NÓNG HỖ TRỢ 24/7'),
       el('div', { style: 'font-size: 22px; font-weight: 800; color: #004b87; margin: 0.25rem 0 0;' }, '1900 6886'),

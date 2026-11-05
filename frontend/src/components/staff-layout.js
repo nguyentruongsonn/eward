@@ -1,5 +1,5 @@
 import { el } from './dom.js';
-import { getStoredUser, clearAuthToken } from '../api/client.js';
+import { getStoredUser, logoutSession } from '../api/client.js';
 import { getStaffNavigation } from './staff-nav.js';
 import { getNavItemIcon } from './nav-icons.js';
 import { createStaffNotificationDropdown } from './staff-notification-dropdown.js';
@@ -81,7 +81,7 @@ export function createStaffLayout({ navigate, contentNode, currentPath }) {
     el('div', { style: 'border-top: 1px solid #f1f5f9; padding: 0.35rem 0;' }, [
       el('button', {
         type: 'button', style: 'width: 100%; text-align: left; padding: 0.5rem 1rem; background: none; border: none; font-size: 12.5px; color: #dc2626; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;',
-        onClick: () => { closeProfileDropdown(); clearAuthToken(); window.dispatchEvent(new CustomEvent('auth:change', { detail: null })); navigate('/dang-nhap'); },
+        onClick: async () => { closeProfileDropdown(); await logoutSession(); window.dispatchEvent(new CustomEvent('auth:change', { detail: null })); navigate('/dang-nhap'); },
       }, 'Đăng xuất tài khoản'),
     ]),
   ]);

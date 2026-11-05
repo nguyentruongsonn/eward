@@ -68,18 +68,18 @@ export function renderProceduresPage({ navigate }) {
 
     if (filtered.length === 0) {
       listContainer.replaceChildren(el('div', {
-        style: 'padding: 3rem; text-align: center; background: #ffffff; border: 1px dashed #d0d7de; border-radius: 4px; color: #64748b;',
+        style: 'padding: 3rem; text-align: center; background: #ffffff; border: 1px dashed #d0d7de; border-radius: 6px; color: #64748b;',
       }, 'Không tìm thấy thủ tục hành chính phù hợp với điều kiện tìm kiếm.'));
       return;
     }
 
     const cards = filtered.map(p => el('div', {
       class: 'card',
-      style: 'padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; background: #ffffff; border: 1px solid #d0d7de; border-radius: 4px;',
+      style: 'padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; background: #ffffff; border: none; border-radius: 6px;',
     }, [
       el('div', { style: 'flex: 1; min-width: 320px;' }, [
         el('div', { style: 'display: flex; gap: 0.5rem; margin-bottom: 0.35rem; align-items: center; flex-wrap: wrap;' }, [
-          el('span', { style: 'font-size: 11px; font-weight: 600; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; padding: 0.15rem 0.5rem; border-radius: 3px;' }, p.field_name || 'Hành chính'),
+          el('span', { style: 'font-size: 11px; font-weight: 600; color: #475569; background: #f8fafc; border: none; padding: 0.15rem 0.5rem; border-radius: 5px;' }, p.field_name || 'Hành chính'),
         ]),
         el('h3', {
           style: 'font-family: var(--font-heading); font-size: 15px; font-weight: 700; color: #004482; margin: 0 0 0.35rem; line-height: 1.4; cursor: pointer;',

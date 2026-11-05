@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\ForceJsonApi::class,
         ]);
         $middleware->alias([
+            'access-token' => \App\Http\Middleware\RequireAccessToken::class,
             'appointment' => \App\Http\Middleware\RequireAppointmentStaff::class,
             'staff' => \App\Http\Middleware\RequireStaff::class,
             'administrator' => \App\Http\Middleware\RequireAdministrator::class,

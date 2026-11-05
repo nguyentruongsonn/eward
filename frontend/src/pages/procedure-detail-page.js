@@ -23,10 +23,10 @@ export function renderProcedureDetailPage({ params, navigate }) {
 
     const headerCard = el('div', {
       class: 'card',
-      style: 'padding: 1.75rem; background: #ffffff; border: 1px solid #d0d7de; margin-bottom: 1.5rem;',
+      style: 'padding: 1.75rem; background: #ffffff; border: none; border-radius: 6px; margin-bottom: 1.5rem;',
     }, [
       el('div', { style: 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center; flex-wrap: wrap;' }, [
-        el('span', { style: 'font-size: 11px; font-weight: 600; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; padding: 0.15rem 0.5rem; border-radius: 3px;' }, p.field_name || 'Hành chính'),
+        el('span', { style: 'font-size: 11px; font-weight: 600; color: #475569; background: #f8fafc; border: none; padding: 0.15rem 0.5rem; border-radius: 5px;' }, p.field_name || 'Hành chính'),
       ]),
       el('h1', { style: 'font-family: var(--font-heading); font-size: 20px; font-weight: 800; color: #004482; margin: 0.5rem 0 1.25rem; line-height: 1.4;' }, p.name),
       el('div', { style: 'display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;' }, [
@@ -164,7 +164,7 @@ export function renderProcedureDetailPage({ params, navigate }) {
 
       const card = el('div', {
         class: 'card',
-        style: 'padding: 1.25rem 1.5rem; background: #ffffff; border: 1px solid #d0d7de;',
+        style: 'padding: 1.25rem 1.5rem; background: #ffffff; border: none; border-radius: 6px;',
       }, [
         el('div', {
           style: 'display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;',
@@ -223,13 +223,13 @@ export function renderProcedureDetailPage({ params, navigate }) {
     } else {
       contentArea.replaceChildren(el('div', {
         class: 'card',
-        style: 'padding: 2rem; text-align: center; color: #b91c1c; border: 1px solid #d0d7de; background: #ffffff;',
+        style: 'padding: 2rem; text-align: center; color: #b91c1c; border: none; border-radius: 6px; background: #ffffff;',
       }, 'Không tìm thấy thủ tục hành chính được yêu cầu.'));
     }
   }).catch(err => {
     contentArea.replaceChildren(el('div', {
       class: 'card',
-      style: 'padding: 2rem; text-align: center; color: #b91c1c; border: 1px solid #d0d7de; background: #ffffff;',
+      style: 'padding: 2rem; text-align: center; color: #b91c1c; border: none; border-radius: 6px; background: #ffffff;',
     }, `Lỗi khi tải thông tin thủ tục: ${err.message || 'Thủ tục không tồn tại hoặc hệ thống gián đoạn'}`));
   });
 

@@ -18,13 +18,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use Tymon\JWTAuth\Contracts\Providers\JWT as JWTProvider;
 use Tymon\JWTAuth\Facades\JWTAuth;
+use Tymon\JWTAuth\Manager as JWTManager;
 
 class AuthController extends Controller
 {
     public function __construct(
         private readonly AuthService $authService,
         private readonly OtpService $otpService,
+        private readonly JWTProvider $jwtProvider,
+        private readonly JWTManager $jwtManager,
     ) {}
 
     public function register(RegisterRequest $request): JsonResponse
@@ -79,14 +83,13 @@ class AuthController extends Controller
 
         $this->otpService->forget($email);
         RateLimiter::clear($this->throttleKey('register', $email, $request));
-        $token = JWTAuth::fromUser($user);
         app(AuditLogger::class)->log('auth.register_verified', [
             'user_id' => $user->getKey(),
             'email' => $user->email,
             'request_id' => $request->attributes->get('request_id'),
         ]);
 
-        return $this->tokenResponse($token, $user, 'Đăng ký thành công.', 201, $request);
+        return $this->tokenResponse($user, 'Đăng ký thành công.', 201, $request);
     }
 
     public function resendOtp(ResendOtpRequest $request): JsonResponse
@@ -118,7 +121,10 @@ class AuthController extends Controller
             return ApiResponse::error('Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau.', 'AUTH_RATE_LIMITED', 429, [], $request);
         }
 
-        $token = auth('api')->attempt($request->only('email', 'password'));
+        $token = auth('api')
+            ->claims(['token_type' => 'access'])
+            ->setTTL((int) config('jwt.ttl', 60))
+            ->attempt($request->only('email', 'password'));
         if (! $token) {
             RateLimiter::hit($throttleKey, 60);
 
@@ -161,14 +167,13 @@ class AuthController extends Controller
             return ApiResponse::error($e->getMessage(), $e->errorCode, $e->status, [], $request);
         }
 
-        $token = JWTAuth::fromUser($user);
         app(AuditLogger::class)->log('auth.login', [
             'user_id' => $user->getKey(),
             'email' => $user->email,
             'request_id' => $request->attributes->get('request_id'),
         ]);
 
-        return $this->tokenResponse($token, $user, 'Đăng nhập thành công.', 200, $request);
+        return $this->tokenResponse($user, 'Đăng nhập thành công.', 200, $request);
     }
 
     public function resendLoginOtp(Request $request): JsonResponse
@@ -195,32 +200,75 @@ class AuthController extends Controller
 
     public function refresh(Request $request): JsonResponse
     {
-        $token = $request->input('refresh_token') ?: auth('api')->getToken();
-        if ($token) {
-            try {
-                $newToken = auth('api')->setToken($token)->refresh();
-                $user = auth('api')->setToken($newToken)->user();
+        $token = trim((string) $request->input('refresh_token', ''));
+        if ($token === '') {
+            $token = (string) ($request->bearerToken() ?? '');
+        }
 
-                return $this->tokenResponse($newToken, $user, 'Token đã được làm mới.', 200, $request);
-            } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
-                return ApiResponse::error('Refresh token đã hết hạn. Vui lòng đăng nhập lại.', 'REFRESH_TOKEN_EXPIRED', 401, [], $request);
-            } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
-                return ApiResponse::error('Token không hợp lệ.', 'TOKEN_INVALID', 401, [], $request);
-            }
+        if ($token === '') {
+            return ApiResponse::error('Vui lòng cung cấp refresh token.', 'REFRESH_TOKEN_REQUIRED', 401, [], $request);
         }
 
         try {
-            return $this->tokenResponse(auth('api')->refresh(), auth('api')->user(), 'Token đã được làm mới.', 200, $request);
-        } catch (\Exception $e) {
-            return ApiResponse::error('Không thể làm mới token.', 'REFRESH_FAILED', 401, [], $request);
+            $claims = $this->jwtProvider->decode($token);
+            $tokenType = $claims['token_type'] ?? null;
+
+            if ($tokenType !== null && $tokenType !== 'refresh') {
+                return ApiResponse::error('Endpoint này chỉ chấp nhận refresh token.', 'REFRESH_TOKEN_REQUIRED', 401, [], $request);
+            }
+
+            if ($tokenType === null) {
+                $rotatedLegacyToken = auth('api')
+                    ->claims(['token_type' => 'refresh'])
+                    ->setTTL((int) config('jwt.refresh_ttl', 20160))
+                    ->setToken($token)
+                    ->refresh();
+                $user = auth('api')->setToken($rotatedLegacyToken)->user();
+                auth('api')->setToken($rotatedLegacyToken)->logout();
+            } else {
+                auth('api')->setToken($token)->getPayload();
+                $user = auth('api')->setToken($token)->user();
+                auth('api')->setToken($token)->logout();
+            }
+
+            if (! $user instanceof Nguoi) {
+                return ApiResponse::error('Không tìm thấy tài khoản của refresh token.', 'TOKEN_INVALID', 401, [], $request);
+            }
+
+            $this->jwtManager->setRefreshFlow(false);
+
+            return $this->tokenResponse($user, 'Token đã được làm mới.', 200, $request);
+        } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $exception) {
+            return ApiResponse::error('Refresh token đã hết hạn. Vui lòng đăng nhập lại.', 'REFRESH_TOKEN_EXPIRED', 401, [], $request);
+        } catch (\Tymon\JWTAuth\Exceptions\JWTException $exception) {
+            return ApiResponse::error('Token không hợp lệ hoặc đã bị thu hồi.', 'TOKEN_INVALID', 401, [], $request);
+        } finally {
+            $this->jwtManager->setRefreshFlow(false);
         }
     }
 
-    public function logout(): JsonResponse
+    public function logout(Request $request): JsonResponse
     {
-        auth('api')->logout();
+        $user = auth('api')->user();
+        $accessToken = (string) ($request->bearerToken() ?? '');
+        $refreshToken = trim((string) $request->input('refresh_token', ''));
 
-        return ApiResponse::success(null, 'Đăng xuất thành công.');
+        if ($refreshToken !== '') {
+            try {
+                $claims = $this->jwtProvider->decode($refreshToken);
+                $tokenType = $claims['token_type'] ?? null;
+                $sameUser = (string) ($claims['sub'] ?? '') === (string) $user->getJWTIdentifier();
+
+                if (($tokenType === null || $tokenType === 'refresh') && $sameUser && ($accessToken === '' || ! hash_equals($accessToken, $refreshToken))) {
+                    JWTAuth::setToken($refreshToken)->invalidate();
+                }
+            } catch (\Tymon\JWTAuth\Exceptions\JWTException $exception) {
+            }
+        }
+
+        auth('api')->setToken($accessToken)->logout();
+
+        return ApiResponse::success(null, 'Đăng xuất thành công.', 200, $request);
     }
 
     public function me(): JsonResponse
@@ -262,11 +310,25 @@ class AuthController extends Controller
         return ApiResponse::success(null, 'Đổi mật khẩu thành công.', 200, $request);
     }
 
-    private function tokenResponse(string $token, ?Nguoi $user, string $message, int $status = 200, $request = null): JsonResponse
-    {
+    private function tokenResponse(
+        Nguoi $user,
+        string $message,
+        int $status = 200,
+        ?Request $request = null,
+        ?string $refreshToken = null,
+    ): JsonResponse {
+        $accessToken = auth('api')
+            ->claims(['token_type' => 'access'])
+            ->setTTL((int) config('jwt.ttl', 60))
+            ->login($user);
+        $refreshToken ??= auth('api')
+            ->claims(['token_type' => 'refresh'])
+            ->setTTL((int) config('jwt.refresh_ttl', 20160))
+            ->login($user);
+
         return ApiResponse::success([
-            'access_token' => $token,
-            'refresh_token' => $token,
+            'access_token' => $accessToken,
+            'refresh_token' => $refreshToken,
             'token_type' => 'Bearer',
             'expires_in' => (int) config('jwt.ttl', 20) * 60,
             'refresh_expires_in' => (int) config('jwt.refresh_ttl', 10080) * 60,

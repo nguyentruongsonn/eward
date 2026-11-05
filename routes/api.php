@@ -52,14 +52,14 @@ Route::prefix('v1')->group(function (): void {
 
         Route::post('refresh', [AuthController::class, 'refresh']);
 
-        Route::middleware('auth:api')->group(function (): void {
+        Route::middleware(['auth:api', 'access-token'])->group(function (): void {
             Route::post('logout', [AuthController::class, 'logout']);
             Route::get('me', [AuthController::class, 'me']);
             Route::post('change-password', [AuthController::class, 'changePassword']);
         });
     });
 
-    Route::middleware('auth:api')->prefix('citizen')->group(function (): void {
+    Route::middleware(['auth:api', 'access-token'])->prefix('citizen')->group(function (): void {
         Route::get('profile', [CitizenProfileController::class, 'show']);
         Route::patch('profile', [CitizenProfileController::class, 'update']);
         Route::get('identity', [CitizenProfileController::class, 'identity']);
@@ -84,7 +84,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('notifications/{notification}/read', [CitizenNotificationController::class, 'markAsRead']);
     });
 
-    Route::middleware('auth:api')->prefix('payments')->group(function (): void {
+    Route::middleware(['auth:api', 'access-token'])->prefix('payments')->group(function (): void {
         Route::post('intents', [PaymentController::class, 'store']);
         Route::get('sync', [PaymentController::class, 'sync']);
         Route::get('intents/{intent}', [PaymentController::class, 'show']);
@@ -92,21 +92,21 @@ Route::prefix('v1')->group(function (): void {
     });
     Route::post('payments/webhooks/payos', [PaymentController::class, 'payosWebhook']);
 
-    Route::middleware('auth:api')->prefix('citizen')->group(function (): void {
+    Route::middleware(['auth:api', 'access-token'])->prefix('citizen')->group(function (): void {
         Route::get('payments', [PaymentController::class, 'index']);
         Route::get('payment-history', [PaymentController::class, 'history']);
         Route::get('payments/{intent}/invoice', [PaymentController::class, 'invoice'])
             ->name('api.v1.citizen.payments.invoice');
     });
 
-    Route::middleware('auth:api')->prefix('citizen/appointments')->group(function (): void {
+    Route::middleware(['auth:api', 'access-token'])->prefix('citizen/appointments')->group(function (): void {
         Route::get('available-slots', [CitizenAppointmentController::class, 'slots']);
         Route::get('/', [CitizenAppointmentController::class, 'index']);
         Route::post('/', [CitizenAppointmentController::class, 'store']);
         Route::post('{appointment}/cancel', [CitizenAppointmentController::class, 'cancel']);
     });
 
-    Route::middleware(['auth:api', 'appointment'])->prefix('admin')->group(function (): void {
+    Route::middleware(['auth:api', 'access-token', 'appointment'])->prefix('admin')->group(function (): void {
         Route::get('dashboard', [AdminDashboardController::class, 'show']);
         Route::get('appointments', [AdminAppointmentController::class, 'index']);
         Route::post('appointments/check-in', [AdminAppointmentController::class, 'checkIn']);
@@ -115,7 +115,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('appointments/{appointment}/reminder', [AdminAppointmentController::class, 'reminder']);
     });
 
-    Route::middleware(['auth:api', 'staff'])->prefix('admin')->group(function (): void {
+    Route::middleware(['auth:api', 'access-token', 'staff'])->prefix('admin')->group(function (): void {
         Route::get('applications', [AdminApplicationController::class, 'index']);
         Route::get('applications/{application}', [AdminApplicationController::class, 'show']);
         Route::post('applications/{application}/accept', [AdminApplicationController::class, 'accept']);
