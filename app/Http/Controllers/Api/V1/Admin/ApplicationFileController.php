@@ -39,7 +39,8 @@ class ApplicationFileController extends Controller
         $item = HoSoXuLy::query()->findOrFail($application);
         $this->authorize('viewStaff', $item);
         $document = $this->documents->findForApplication($item, $file);
+        $inline = $request->query('disposition') === 'inline' || $request->boolean('inline');
 
-        return $this->storage->download($document);
+        return $this->storage->download($document, $inline);
     }
 }

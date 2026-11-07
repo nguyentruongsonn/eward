@@ -1,7 +1,8 @@
 import { el } from './dom.js';
-import { api } from '../api/client.js';
+import { api, withAuthToken, downloadFile } from '../api/client.js';
 import { createWordEditor } from './word-editor.js';
 import { showToast } from './toast.js';
+import { openFilePreviewModal } from './file-preview-modal.js';
 
 let activeOpinionModal = null;
 
@@ -52,19 +53,35 @@ export function openStaffOpinionModal({ app, onSaved }) {
               style: `font-size: 10px; font-weight: 700; padding: 0.1rem 0.35rem; border-radius: 2px; ${isImg ? 'background: #e0f2fe; color: #0369a1;' : 'background: #fef3c7; color: #92400e;'}`
             }, isImg ? 'ẢNH' : 'TỆP'),
             el('a', {
-              href: f.download_url,
+              href: withAuthToken(f.download_url),
               target: '_blank',
-              style: 'font-size: 12px; font-weight: 600; color: #004b87; text-decoration: none; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;',
+              style: 'font-size: 12px; font-weight: 600; color: #004b87; text-decoration: none; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; cursor: pointer;',
+              onClick: (e) => {
+                e.preventDefault();
+                openFilePreviewModal({ url: f.download_url, name: f.name });
+              },
             }, f.name || 'Tệp ý kiến'),
             el('span', { style: 'font-size: 11px; color: #94a3b8;' }, f.size ? `(${(f.size / 1024).toFixed(1)} KB)` : ''),
           ]),
           el('div', { style: 'display: flex; gap: 0.35rem; align-items: center;' }, [
-            el('a', {
-              href: f.download_url,
-              target: '_blank',
+            el('button', {
+              type: 'button',
               class: 'btn btn-secondary btn-sm',
               style: 'padding: 0.15rem 0.5rem; font-size: 11px;',
+              onClick: () => openFilePreviewModal({ url: f.download_url, name: f.name }),
             }, 'Xem'),
+            el('button', {
+              type: 'button',
+              class: 'btn btn-secondary btn-sm',
+              style: 'padding: 0.15rem 0.5rem; font-size: 11px; color: #0284c7;',
+              onClick: async () => {
+                try {
+                  await downloadFile(f.download_url, f.name);
+                } catch (err) {
+                  showToast.error(err.message || 'Lỗi khi tải tệp.');
+                }
+              },
+            }, 'Tải'),
             el('button', {
               type: 'button',
               class: 'btn btn-secondary btn-sm',

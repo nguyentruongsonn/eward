@@ -50,7 +50,7 @@ export function createStaffLayout({ navigate, contentNode, currentPath }) {
     },
   }, [
     el('span', {
-      style: 'width: 26px; height: 26px; border-radius: 50%; background: #eff6ff; color: #004b87; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; border: 1px solid #bfdbfe;',
+      style: 'width: 26px; height: 26px; border-radius: 50%; background: #eff6ff; color: #004b87; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800;',
     }, displayName.charAt(0).toUpperCase()),
     el('div', { style: 'text-align: left; display: flex; flex-direction: column;' }, [
       el('span', { style: 'font-size: 12.5px; font-weight: 700; color: #0f172a; line-height: 1.2;' }, displayName),
@@ -66,7 +66,7 @@ export function createStaffLayout({ navigate, contentNode, currentPath }) {
     el('div', { style: 'padding: 0.75rem 1rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0;' }, [
       el('div', { style: 'font-size: 13px; font-weight: 800; color: #004b87; line-height: 1.3;' }, displayName),
       el('div', { style: 'font-size: 11.5px; color: #64748b; margin-top: 0.15rem; word-break: break-all;' }, user?.email || 'canbo@eward.gov.vn'),
-      el('div', { style: 'display: inline-block; margin-top: 0.35rem; font-size: 10.5px; font-weight: 700; color: #004b87; background: #eff6ff; padding: 0.1rem 0.45rem; border-radius: 4px; border: 1px solid #bfdbfe;' }, roleName),
+      el('div', { style: 'display: inline-block; margin-top: 0.35rem; font-size: 10.5px; font-weight: 700; color: #004b87; background: #eff6ff; padding: 0.1rem 0.45rem; border-radius: 4px;' }, roleName),
     ]),
     el('div', { style: 'padding: 0.35rem 0;' }, [
       el('button', {

@@ -242,24 +242,23 @@ export function createProfileApplicationsTab({ navigate }) {
     const id = Number(statusId);
     let bg = '#eff6ff';
     let color = '#1d4ed8';
-    let border = '#bfdbfe';
 
     if (id === 13) {
-      bg = '#fff7ed'; color = '#c2410c'; border = '#ffedd5';
+      bg = '#fff7ed'; color = '#c2410c';
     } else if (id === 1) {
-      bg = '#fefce8'; color = '#a16207'; border = '#fef08a';
+      bg = '#fefce8'; color = '#a16207';
     } else if (id === 2 || id === 4) {
-      bg = '#eff6ff'; color = '#1d4ed8'; border = '#bfdbfe';
+      bg = '#eff6ff'; color = '#1d4ed8';
     } else if (id === 5) {
-      bg = '#fff7ed'; color = '#c2410c'; border = '#ffedd5';
+      bg = '#fff7ed'; color = '#c2410c';
     } else if (id === 9 || id === 10) {
-      bg = '#f0fdf4'; color = '#15803d'; border = '#bbf7d0';
+      bg = '#f0fdf4'; color = '#15803d';
     } else if (id === 3 || id === 8) {
-      bg = '#fef2f2'; color = '#b91c1c'; border = '#fecaca';
+      bg = '#fef2f2'; color = '#b91c1c';
     }
 
     return el('span', {
-      style: `display: inline-block; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 11px; font-weight: 700; background: ${bg}; color: ${color}; border: 1px solid ${border}; white-space: nowrap;`,
+      style: `display: inline-block; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 11px; font-weight: 700; background: ${bg}; color: ${color}; white-space: nowrap;`,
     }, statusName || 'Đang xử lý');
   }
 
@@ -267,12 +266,12 @@ export function createProfileApplicationsTab({ navigate }) {
     const fee = Number(app.fee ?? app.lePhi ?? 0);
     const isPaid = fee <= 0 || Boolean(app.payment_status?.is_paid);
     if (fee <= 0) {
-      return el('span', { style: 'display: inline-block; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 11px; font-weight: 700; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; white-space: nowrap;' }, 'Miễn phí');
+      return el('span', { style: 'display: inline-block; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 11px; font-weight: 700; background: #f1f5f9; color: #475569; white-space: nowrap;' }, 'Miễn phí');
     }
     if (isPaid) {
-      return el('span', { style: 'display: inline-block; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 11px; font-weight: 700; background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; white-space: nowrap;' }, 'Đã thanh toán');
+      return el('span', { style: 'display: inline-block; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 11px; font-weight: 700; background: #f0fdf4; color: #15803d; white-space: nowrap;' }, 'Đã thanh toán');
     }
-    return el('span', { style: 'display: inline-block; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 11px; font-weight: 700; background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; white-space: nowrap;' }, 'Chưa thanh toán');
+    return el('span', { style: 'display: inline-block; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 11px; font-weight: 700; background: #fff7ed; color: #c2410c; white-space: nowrap;' }, 'Chưa thanh toán');
   }
 
   return container;

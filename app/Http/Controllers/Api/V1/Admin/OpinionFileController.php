@@ -51,8 +51,9 @@ class OpinionFileController extends Controller
         $item = HoSoXuLy::query()->findOrFail($application);
         $this->authorize('viewOpinionFile', $item);
         $opinionFile = $this->files->findForApplication($item, $file);
+        $inline = $request->query('disposition') === 'inline' || $request->boolean('inline');
 
-        return $this->files->download($opinionFile);
+        return $this->files->download($opinionFile, $inline);
     }
 
     public function destroy(Request $request, string $application, int $file): JsonResponse

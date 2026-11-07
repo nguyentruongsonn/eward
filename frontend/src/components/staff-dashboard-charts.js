@@ -144,7 +144,7 @@ function createProcedureDistributionCard(procedureList, totalCount, onNavigate) 
       el('div', { style: 'display: flex; justify-content: space-between; align-items: center; font-size: 12.5px;' }, [
         el('div', { style: 'display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0; padding-right: 1rem;' }, [
           el('span', {
-            style: `width: 20px; height: 20px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; ${idx === 0 ? 'background: #004b87; color: #ffffff;' : 'background: #eff6ff; color: #004b87; border: 1px solid #bfdbfe;'}`,
+            style: `width: 20px; height: 20px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; ${idx === 0 ? 'background: #004b87; color: #ffffff;' : 'background: #eff6ff; color: #004b87;'}`,
           }, String(idx + 1)),
           el('span', { style: 'font-weight: 600; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;' }, proc.procedure_name || `Thủ tục #${proc.procedure_id}`),
         ]),

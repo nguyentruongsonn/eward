@@ -90,7 +90,7 @@ export function renderStaffDetailPage({ params, navigate }) {
     ]);
 
     const supplementBanner = app.supplement_request ? el('div', {
-      class: 'card', style: 'padding: 0.85rem 1.25rem; background: #fffbeb; border: 1px solid #fed7aa; border-left: 4px solid #d97706; border-radius: 8px; box-shadow: 0 1px 3px rgba(15,23,42,0.04); margin-bottom: 1rem;',
+      class: 'card', style: 'padding: 0.85rem 1.25rem; background: #fffbeb; border: 1px solid #fed7aa; border-radius: 8px; box-shadow: 0 1px 3px rgba(15,23,42,0.04); margin-bottom: 1rem;',
     }, [
       el('h4', { style: 'color: #92400e; font-size: 12.5px; font-weight: 800; margin: 0 0 0.25rem;' }, 'YÊU CẦU BỔ SUNG GIẤY TỜ'),
       el('p', { style: 'font-size: 12px; color: #78350f; margin: 0;' }, app.supplement_request.note || 'Cần bổ sung tài liệu để hoàn thiện hồ sơ.'),
@@ -99,7 +99,7 @@ export function renderStaffDetailPage({ params, navigate }) {
     const isSupplemented = sid === 6 || String(app.notes || '').includes('Công dân đã bổ sung');
     const supplementedBanner = isSupplemented ? el('div', {
       class: 'card',
-      style: 'padding: 0.85rem 1.25rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #16a34a; border-radius: 8px; box-shadow: 0 1px 3px rgba(15,23,42,0.04); margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;',
+      style: 'padding: 0.85rem 1.25rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; box-shadow: 0 1px 3px rgba(15,23,42,0.04); margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;',
     }, [
       el('div', {}, [
         el('div', { style: 'display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.2rem;' }, [
@@ -120,8 +120,8 @@ export function renderStaffDetailPage({ params, navigate }) {
 
     const headerCard = el('div', { class: 'card', style: 'padding: 1.25rem 1.5rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(15,23,42,0.04); margin-bottom: 1.25rem;' }, [
       el('div', { style: 'display: flex; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.85rem;' }, [
-        el('span', { style: 'font-size: 11px; font-weight: 800; color: #004b87; background: #eff6ff; border: 1px solid #bfdbfe; padding: 0.2rem 0.6rem; border-radius: 4px;' }, `MÃ HỒ SƠ: ${app.id}`),
-        app.procedure_field ? el('span', { style: 'font-size: 11px; font-weight: 600; color: #475569; background: #f1f5f9; border: 1px solid #e2e8f0; padding: 0.2rem 0.5rem; border-radius: 4px;' }, app.procedure_field) : null,
+        el('span', { style: 'font-size: 11px; font-weight: 800; color: #004b87; background: #eff6ff; padding: 0.2rem 0.6rem; border-radius: 4px;' }, `MÃ HỒ SƠ: ${app.id}`),
+        app.procedure_field ? el('span', { style: 'font-size: 11px; font-weight: 600; color: #475569; background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px;' }, app.procedure_field) : null,
       ]),
       el('h2', { style: 'font-family: var(--font-heading); font-size: 18px; font-weight: 800; color: #004b87; margin: 0 0 0.85rem;' }, app.procedure_name || 'Thủ tục hành chính'),
       el('div', { style: 'display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.65rem; padding: 0.75rem 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 12.5px; margin-bottom: 0.85rem;' }, [
@@ -136,7 +136,7 @@ export function renderStaffDetailPage({ params, navigate }) {
               cell('Ngày tiếp nhận:', app.received_at ? app.received_at.split('T')[0] : '-'), cell('Ngày hẹn trả:', app.due_at ? app.due_at.split('T')[0] : '-'),
               cell('Thời gian còn lại:', el('span', { style: `font-weight: 700; font-size: 11.5px; padding: 0.15rem 0.5rem; border-radius: 3px; background: ${rem.bg}; color: ${rem.color}; display: inline-block;` }, rem.text)),
               cell('Ngày trả thực tế:', app.delivered_at ? app.delivered_at.split('T')[0] : '-'), cell('Hình thức:', app.delivery_method || 'Trực tiếp tại Một cửa'),
-              cell('Tình trạng:', el('span', { style: `font-weight: 700; font-size: 11.5px; padding: 0.15rem 0.55rem; border-radius: 3px; background: ${statusObj.bg}; color: ${statusObj.color}; border: 1px solid ${statusObj.border}; display: inline-block;` }, statusName)),
+              cell('Tình trạng:', el('span', { style: `font-weight: 700; font-size: 11.5px; padding: 0.15rem 0.55rem; border-radius: 3px; background: ${statusObj.bg}; color: ${statusObj.color}; display: inline-block;` }, statusName)),
             ]),
           ]),
           el('div', { style: 'border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem 1rem; background: #ffffff;' }, [

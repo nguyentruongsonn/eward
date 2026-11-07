@@ -53,8 +53,9 @@ class ResultFileController extends Controller
         $item = HoSoXuLy::query()->findOrFail($application);
         $this->authorize('viewStaffResultFile', $item);
         $resultFile = $this->files->findForApplication($item, $file);
+        $inline = $request->query('disposition') === 'inline' || $request->boolean('inline');
 
-        return $this->files->download($resultFile);
+        return $this->files->download($resultFile, $inline);
     }
 
     public function destroy(Request $request, string $application, int $file): JsonResponse

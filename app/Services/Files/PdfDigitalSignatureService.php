@@ -9,10 +9,13 @@ use Throwable;
 class PdfDigitalSignatureService
 {
     private string $certDir;
+    private OfficialSealGenerator $sealGenerator;
 
-    public function __construct()
-    {
+    public function __construct(
+        ?OfficialSealGenerator $sealGenerator = null,
+    ) {
         $this->certDir = storage_path('app/certs');
+        $this->sealGenerator = $sealGenerator ?? new OfficialSealGenerator();
     }
 
     // Ký số và đóng dấu điện tử trực tiếp vào file PDF
@@ -49,7 +52,7 @@ class PdfDigitalSignatureService
             // Cấu hình chữ ký số chuẩn PKCS#7 PAdES
             $signatureInfo = [
                 'Name' => $signerName,
-                'Location' => 'UBND Phuong E-Ward',
+                'Location' => 'UBND Phuong ABC',
                 'Reason' => $reason ?: 'Phe duyet ket qua giai quyet TTHC',
                 'ContactInfo' => 'dvc@eward.gov.vn',
             ];
@@ -83,44 +86,31 @@ class PdfDigitalSignatureService
         return $mimeType === 'application/pdf';
     }
 
-    // Vẽ con dấu mộc đỏ điện tử ở góc dưới trang giấy
+    // Vẽ con dấu mộc đỏ tròn và chữ ký số ở góc dưới trang giấy chuẩn như văn bản hành chính
     private function drawDigitalSeal(Fpdi $pdf, float $pageWidth, float $pageHeight, string $signerName): void
     {
-        $stampWidth = 72;
-        $stampHeight = 36;
-        $marginRight = 15;
-        $marginBottom = 20;
+        $sealPng = $this->sealGenerator->generateSealPng($signerName);
+        if ($sealPng !== null) {
+            $tempSeal = tempnam(sys_get_temp_dir(), 'seal_').'.png';
+            file_put_contents($tempSeal, $sealPng);
+            try {
+                $sealWidth = 82; // mm
+                $sealHeight = 50; // mm
+                $marginRight = 18;
+                $marginBottom = 22;
 
-        $x = max(10, $pageWidth - $stampWidth - $marginRight);
-        $y = max(10, $pageHeight - $stampHeight - $marginBottom);
+                $x = max(10, $pageWidth - $sealWidth - $marginRight);
+                $y = max(10, $pageHeight - $sealHeight - $marginBottom);
 
-        // Màu đỏ chuẩn con dấu hành chính
-        $pdf->SetTextColor(200, 16, 16);
-        $pdf->SetDrawColor(200, 16, 16);
-        $pdf->SetLineWidth(0.6);
+                $pdf->Image($tempSeal, $x, $y, $sealWidth, $sealHeight, 'PNG');
 
-        // Khung viền ngoài
-        $pdf->RoundedRect($x, $y, $stampWidth, $stampHeight, 2, '1111');
-
-        // Khung viền trong
-        $pdf->SetLineWidth(0.2);
-        $pdf->RoundedRect($x + 1, $y + 1, $stampWidth - 2, $stampHeight - 2, 1.5, '1111');
-
-        // Tiêu đề cơ quan
-        $pdf->SetXY($x + 2, $y + 3);
-        $pdf->SetFont('helvetica', 'B', 8);
-        $pdf->Cell($stampWidth - 4, 4, 'UBND PHUONG E-WARD', 0, 1, 'C');
-
-        // Nhãn xác nhận ký số
-        $pdf->SetXY($x + 2, $y + 8);
-        $pdf->SetFont('helvetica', 'B', 9);
-        $pdf->Cell($stampWidth - 4, 5, 'DA KY DIEN TU', 0, 1, 'C');
-
-        // Thông tin người ký và thời gian
-        $pdf->SetXY($x + 2, $y + 14);
-        $pdf->SetFont('helvetica', '', 7);
-        $lines = "Nguoi ky: {$signerName}\nNgay ky: ".now()->format('d/m/Y H:i:s')."\nHe thong: E-Ward DVC";
-        $pdf->MultiCell($stampWidth - 4, 3.5, $lines, 0, 'C');
+                return;
+            } finally {
+                if (file_exists($tempSeal)) {
+                    @unlink($tempSeal);
+                }
+            }
+        }
     }
 
     // Tự động sinh chứng thư số nếu chưa có
@@ -156,9 +146,9 @@ class PdfDigitalSignatureService
             'countryName' => 'VN',
             'stateOrProvinceName' => 'Ha Noi',
             'localityName' => 'Ha Noi',
-            'organizationName' => 'Uy Ban Nhan Dan Phuong E-Ward',
+            'organizationName' => 'Uy Ban Nhan Dan Phuong ABC',
             'organizationalUnitName' => 'Bo Phan Tiep Nhan Va Tra Ket Qua',
-            'commonName' => 'Chu tich UBND Phuong E-Ward',
+            'commonName' => 'Chu tich UBND Phuong ABC',
             'emailAddress' => 'dvc@eward.gov.vn',
         ];
 

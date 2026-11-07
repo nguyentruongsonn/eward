@@ -1,5 +1,5 @@
 import { el } from './dom.js';
-import { api, getAuthToken, getStoredUser } from '../api/client.js';
+import { api, getAuthToken, getStoredUser, withAuthToken, downloadFile } from '../api/client.js';
 import { normalizeStaffRole } from './staff-nav.js';
 import { showToast } from './toast.js';
 import { openFilePreviewModal } from './file-preview-modal.js';
@@ -31,6 +31,14 @@ function createMenu(f, app, onRefresh, resultFiles = []) {
     if (!confirm(`Xác nhận duyệt tệp "${f.name}" và chuyển sang Kết quả xử lý?`)) return;
     try {
       const res = await fetch(f.download_url, { headers: { Authorization: `Bearer ${getAuthToken()}` } });
+      if (!res.ok) {
+        let msg = `Không thể tải tệp gốc để duyệt (Mã lỗi ${res.status}).`;
+        try {
+          const errData = await res.json();
+          if (errData?.message) msg = errData.message;
+        } catch (_) {}
+        throw new Error(msg);
+      }
       const blob = await res.blob();
       const fd = new FormData();
       fd.append('file', blob, f.name || 'ket_qua_duyet.pdf');
@@ -92,7 +100,13 @@ function createMenu(f, app, onRefresh, resultFiles = []) {
     }
     menuItems.push(item('Yêu cầu xử lý lại', '#b91c1c', reworkFile));
   }
-  menuItems.push(item('Tải xuống', '#334155', () => window.open(f.download_url, '_blank')));
+  menuItems.push(item('Tải xuống', '#334155', async () => {
+    try {
+      await downloadFile(f.download_url, f.name);
+    } catch (err) {
+      showToast.error(err.message || 'Lỗi khi tải tệp.');
+    }
+  }));
   if (!isOneStop && !isLeader) {
     menuItems.push(item('Xóa tệp', '#dc2626', deleteFile));
   }
@@ -105,6 +119,93 @@ function createMenu(f, app, onRefresh, resultFiles = []) {
 
   const w = el('div', { style: 'position: relative; display: inline-block;', onmouseenter: show, onmouseleave: hide }, [btn, menu]);
   menu.onmouseenter = show; menu.onmouseleave = hide;
+  document.addEventListener('click', () => { menu.style.display = 'none'; });
+  return w;
+}
+
+export function createResultMenu(rf, app, onRefresh) {
+  let timer = null;
+  const menu = el('div', {
+    style: 'position: absolute; right: 0; top: 100%; width: 185px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; box-shadow: 0 10px 25px -5px rgba(15,23,42,0.12); z-index: 1000; display: none; padding: 0.25rem 0;',
+  });
+  const show = () => { if (timer) clearTimeout(timer); menu.style.display = 'block'; };
+  const hide = () => { if (timer) clearTimeout(timer); timer = setTimeout(() => { menu.style.display = 'none'; }, 200); };
+
+  function item(label, color, fn) {
+    const b = el('button', {
+      type: 'button',
+      style: `width: 100%; text-align: left; padding: 0.45rem 0.75rem; background: none; border: none; font-size: 12px; color: ${color}; font-weight: 600; cursor: pointer; display: block;`,
+      onClick: (e) => { e.stopPropagation(); menu.style.display = 'none'; fn(); },
+    }, label);
+    b.onmouseenter = () => { b.style.background = '#f8fafc'; };
+    b.onmouseleave = () => { b.style.background = 'none'; };
+    return b;
+  }
+
+  const role = normalizeStaffRole(getStoredUser()?.vaiTro || getStoredUser()?.role);
+  const isLeader = role === 'leader' || role === 'administrator';
+
+  const menuItems = [];
+
+  // 1. Xem trước
+  if (rf.download_url) {
+    menuItems.push(item('Xem trước', '#004b87', () => openFilePreviewModal({ url: rf.download_url, name: rf.name })));
+  }
+
+  // 2. Ký số & Đóng dấu (cho Lãnh đạo khi chưa ký)
+  if (isLeader && !rf.signed) {
+    menuItems.push(item('Ký số & Đóng dấu', '#c026d3', async () => {
+      if (!confirm(`Xác nhận ký số và đóng dấu mộc đỏ điện tử cho văn bản "${rf.name}"?`)) return;
+      try {
+        await api.post(`/admin/applications/${app.id}/result-files/${rf.id}/sign`, {
+          note: 'Lãnh đạo phê duyệt và ký số kết quả giải quyết TTHC',
+        });
+        showToast.success('Đã ký số và đóng dấu mộc đỏ điện tử thành công.');
+        if (typeof onRefresh === 'function') onRefresh();
+      } catch (err) {
+        showToast.error(err.message || 'Lỗi khi ký số văn bản.');
+      }
+    }));
+  }
+
+  // 3. Tải xuống
+  if (rf.download_url) {
+    menuItems.push(item('Tải xuống', '#334155', async () => {
+      try {
+        await downloadFile(rf.download_url, rf.name);
+      } catch (err) {
+        showToast.error(err.message || 'Lỗi khi tải tệp.');
+      }
+    }));
+  }
+
+  // 4. Hoàn lại thao tác (hoặc xóa/hủy văn bản kết quả)
+  if (isLeader) {
+    menuItems.push(item('Hoàn lại thao tác', '#e11d48', async () => {
+      if (!confirm(`Xác nhận hoàn lại thao tác duyệt văn bản "${rf.name}"? Tệp sẽ được gỡ khỏi Kết quả xử lý.`)) return;
+      try {
+        await api.delete(`/admin/applications/${app.id}/result-files/${rf.id}`);
+        const c = `Lãnh đạo đã hoàn lại thao tác duyệt văn bản: "${rf.name}".`;
+        await api.post(`/admin/applications/${app.id}/comments`, { content: c, comment: c }).catch(() => {});
+        showToast.info(`Đã hoàn lại thao tác duyệt văn bản "${rf.name}".`);
+        if (typeof onRefresh === 'function') onRefresh();
+      } catch (err) {
+        showToast.error(err.message || 'Lỗi khi hoàn lại thao tác.');
+      }
+    }));
+  }
+
+  menu.replaceChildren(...menuItems);
+
+  const btn = el('button', {
+    type: 'button',
+    style: 'background: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; padding: 0.15rem 0.45rem; font-size: 12px; font-weight: 800; color: #475569; cursor: pointer; line-height: 1;',
+    onClick: (e) => { e.stopPropagation(); menu.style.display = menu.style.display === 'block' ? 'none' : 'block'; },
+  }, '...');
+
+  const w = el('div', { style: 'position: relative; display: inline-block;', onmouseenter: show, onmouseleave: hide }, [btn, menu]);
+  menu.onmouseenter = show;
+  menu.onmouseleave = hide;
   document.addEventListener('click', () => { menu.style.display = 'none'; });
   return w;
 }
@@ -143,7 +244,15 @@ export function renderStaffAuditSection(app, onRefresh) {
           el('div', { style: 'display: flex; align-items: center; gap: 0.55rem;' }, [
             el('span', { style: `font-size: 10px; font-weight: 800; padding: 0.15rem 0.4rem; border-radius: 3px; ${isImg ? 'background: #eff6ff; color: #004b87;' : 'background: #f1f5f9; color: #475569;'}` }, isImg ? 'ẢNH' : 'TỆP'),
             el('div', {}, [
-              el('a', { href: f.download_url, target: '_blank', style: 'font-size: 12.5px; font-weight: 600; color: #004b87; text-decoration: none;' }, f.name || 'Tep_dinh_kem.pdf'),
+              el('a', {
+                href: withAuthToken(f.download_url),
+                target: '_blank',
+                style: 'font-size: 12.5px; font-weight: 600; color: #004b87; text-decoration: none; cursor: pointer;',
+                onClick: (e) => {
+                  e.preventDefault();
+                  openFilePreviewModal({ url: f.download_url, name: f.name });
+                },
+              }, f.name || 'Tep_dinh_kem.pdf'),
               el('div', { style: 'font-size: 11px; color: #64748b;' }, f.size ? `${(f.size / 1024).toFixed(1)} KB` : ''),
             ]),
           ]),
@@ -212,18 +321,17 @@ export function renderStaffAuditSection(app, onRefresh) {
       resultFiles.map(rf => el('div', { style: 'display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px;' }, [
         el('div', {}, [
           el('strong', { style: 'color: #0f172a; font-size: 12.5px; display: block;' }, rf.name || 'Van_ban_ket_qua.pdf'),
-          el('span', { style: 'font-size: 11px; color: #64748b;' }, rf.size ? `${(rf.size / 1024).toFixed(1)} KB` : ''),
+          el('div', { style: 'display: flex; gap: 0.4rem; align-items: center; margin-top: 0.2rem;' }, [
+            el('span', { style: 'font-size: 11px; color: #64748b;' }, rf.size ? `${(rf.size / 1024).toFixed(1)} KB` : ''),
+            rf.signed ? el('span', {
+              style: 'font-size: 10.5px; font-weight: 700; background: #dcfce7; color: #166534; padding: 0.1rem 0.35rem; border-radius: 3px; border: 1px solid #86efac;',
+              title: rf.signed_at ? `Ký lúc: ${rf.signed_at}` : 'Đã đóng dấu mộc đỏ điện tử',
+            }, '✓ Đã ký & đóng dấu') : el('span', {
+              style: 'font-size: 10.5px; color: #b45309; background: #fef3c7; padding: 0.1rem 0.35rem; border-radius: 3px; border: 1px solid #fde68a;',
+            }, 'Chưa ký số'),
+          ]),
         ]),
-        el('div', { style: 'display: flex; gap: 0.35rem; align-items: center;' }, [
-          rf.download_url ? el('button', { type: 'button', style: 'padding: 0.3rem 0.65rem; font-size: 11.5px; font-weight: 700; background: #004b87; color: #ffffff; border: none; border-radius: 4px; cursor: pointer;', onClick: () => openFilePreviewModal({ url: rf.download_url, name: rf.name }) }, 'Xem trước') : null,
-          rf.download_url ? el('a', { href: rf.download_url, target: '_blank', style: 'padding: 0.3rem 0.65rem; font-size: 11.5px; font-weight: 700; background: #004b87; color: #ffffff; border: none; border-radius: 4px; text-decoration: none; cursor: pointer;' }, 'Tải xuống') : null,
-          isLeader ? el('button', {
-            type: 'button',
-            style: 'padding: 0.3rem 0.65rem; font-size: 11.5px; font-weight: 700; background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; border-radius: 4px; cursor: pointer;',
-            title: 'Hoàn lại thao tác duyệt văn bản này',
-            onClick: () => revertResultFile(rf),
-          }, 'Hoàn lại thao tác') : null,
-        ]),
+        createResultMenu(rf, app, onRefresh),
       ]))
     ) : el('div', { style: 'padding: 1.5rem 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 12px; color: #64748b; text-align: center;' }, 'Chưa có kết quả xử lý.'),
   ]);

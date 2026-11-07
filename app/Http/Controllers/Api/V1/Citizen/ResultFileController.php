@@ -38,7 +38,8 @@ class ResultFileController extends Controller
         $item = HoSoXuLy::query()->findOrFail($application);
         $this->authorize('viewResultFile', $item);
         $resultFile = $this->files->findForApplication($item, $file);
+        $inline = $request->query('disposition') === 'inline' || $request->boolean('inline');
 
-        return $this->files->download($resultFile);
+        return $this->files->download($resultFile, $inline);
     }
 }

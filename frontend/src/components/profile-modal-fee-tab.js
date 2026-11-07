@@ -25,13 +25,13 @@ function formatVnd(amount) {
 
 function statusBadge(label, tone) {
   const styles = {
-    neutral: ['#f1f5f9', '#475569', '#cbd5e1'],
-    warning: ['#fff7ed', '#c2410c', '#fed7aa'],
-    success: ['#f0fdf4', '#15803d', '#bbf7d0'],
-  }[tone] || ['#f1f5f9', '#475569', '#cbd5e1'];
+    neutral: ['#f1f5f9', '#475569'],
+    warning: ['#fff7ed', '#c2410c'],
+    success: ['#f0fdf4', '#15803d'],
+  }[tone] || ['#f1f5f9', '#475569'];
 
   return el('span', {
-    style: `display: inline-flex; align-items: center; min-height: 27px; padding: 0 0.65rem; border: 1px solid ${styles[2]}; border-radius: 4px; background: ${styles[0]}; color: ${styles[1]}; font-size: 12px; font-weight: 700;`,
+    style: `display: inline-flex; align-items: center; min-height: 27px; padding: 0 0.65rem; border-radius: 4px; background: ${styles[0]}; color: ${styles[1]}; font-size: 12px; font-weight: 700;`,
   }, label);
 }
 

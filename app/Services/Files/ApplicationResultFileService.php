@@ -14,9 +14,24 @@ use Illuminate\Support\Str;
 
 class ApplicationResultFileService
 {
-    private function disk(): \Illuminate\Contracts\Filesystem\Filesystem
+    private function disk(string $path = ''): \Illuminate\Contracts\Filesystem\Filesystem
     {
-        return Storage::disk(config('filesystems.private_disk', 'local'));
+        $primary = Storage::disk(config('filesystems.private_disk', 'local'));
+        if ($path === '' || $primary->exists($path)) {
+            return $primary;
+        }
+
+        foreach (['r2', 'local'] as $candidate) {
+            try {
+                $disk = Storage::disk($candidate);
+                if ($disk->exists($path)) {
+                    return $disk;
+                }
+            } catch (\Throwable) {
+            }
+        }
+
+        return $primary;
     }
 
     public function upload(HoSoXuLy $application, Nguoi $actor, UploadedFile $file): HoSoResultFile
@@ -64,11 +79,21 @@ class ApplicationResultFileService
             ->firstOrFail();
     }
 
-    public function download(HoSoResultFile $file): mixed
+    public function download(HoSoResultFile $file, bool $inline = false): mixed
     {
-        abort_unless($this->disk()->exists($file->path), 404);
+        $disk = $this->disk($file->path);
+        abort_unless($disk->exists($file->path), 404);
 
-        return $this->disk()->download(
+        if ($inline) {
+            return $disk->response(
+                $file->path,
+                $file->original_name,
+                ['Content-Type' => $file->mime_type ?: 'application/octet-stream'],
+                'inline',
+            );
+        }
+
+        return $disk->download(
             $file->path,
             $file->original_name,
             ['Content-Type' => $file->mime_type ?: 'application/octet-stream'],

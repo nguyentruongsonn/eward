@@ -112,7 +112,7 @@ export function createProfilePaymentsTab({ navigate }) {
     }
 
     return el('span', {
-      style: `display: inline-block; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 11px; font-weight: 700; background: ${bg}; color: ${color}; border: 1px solid ${border}; white-space: nowrap;`,
+      style: `display: inline-block; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 11px; font-weight: 700; background: ${bg}; color: ${color}; white-space: nowrap;`,
     }, label);
   }
 

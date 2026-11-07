@@ -47,7 +47,7 @@ export async function openProcedureDetailModal(procedureId) {
     contentNode.append(
       el('div', {}, [
         el('div', { style: 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;' }, [
-          el('span', { style: 'font-size: 11px; font-weight: 700; background: #eff6ff; color: #004482; border: 1px solid #bfdbfe; padding: 0.15rem 0.5rem; border-radius: 3px;' }, `MÃ: TTHC-${p.id}`),
+          el('span', { style: 'font-size: 11px; font-weight: 700; background: #eff6ff; color: #004482; padding: 0.15rem 0.5rem; border-radius: 3px;' }, `MÃ: TTHC-${p.id}`),
           el('span', { style: 'font-size: 11px; font-weight: 600; background: #f8fafc; border: 1px solid #e2e8f0; padding: 0.15rem 0.5rem; border-radius: 3px;' }, p.field_name || '–'),
           el('span', { style: 'font-size: 11px; font-weight: 600; background: #dcfce7; color: #15803d; padding: 0.15rem 0.5rem; border-radius: 3px;' }, p.status || 'Công khai'),
         ]),

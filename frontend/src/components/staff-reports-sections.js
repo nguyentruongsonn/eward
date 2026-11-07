@@ -3,7 +3,7 @@ import { el } from './dom.js';
 export function createKpiCard(label, val, note, accentColor, bgColor) {
   return el('div', {
     class: 'card',
-    style: `padding: 1.25rem; border-left: 4px solid ${accentColor}; background: ${bgColor};`,
+    style: `padding: 1.25rem; background: ${bgColor}; border: 1px solid #e2e8f0; border-radius: 8px;`,
   }, [
     el('div', { style: 'font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;' }, label),
     el('div', { style: `font-size: 24px; font-weight: 800; color: ${accentColor}; margin: 0.4rem 0 0.2rem 0;` }, val),

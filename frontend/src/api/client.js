@@ -140,9 +140,15 @@ export async function request(endpoint, options = {}) {
         clearAuthToken();
         window.dispatchEvent(new CustomEvent('auth:change', { detail: null }));
       }
-      const errorMsg = (typeof payload === 'object' && payload.message)
+      let errorMsg = (typeof payload === 'object' && payload.message)
         ? payload.message
         : `Lỗi kết nối máy chủ (${response.status})`;
+      if (typeof payload === 'object' && payload.errors) {
+        const detailList = Object.values(payload.errors).flat().filter(Boolean);
+        if (detailList.length > 0) {
+          errorMsg = `${errorMsg} (${detailList.join('; ')})`;
+        }
+      }
       const error = new Error(errorMsg);
       error.status = response.status;
       error.payload = payload;
@@ -173,4 +179,35 @@ export async function logoutSession() {
   } finally {
     clearAuthToken();
   }
+}
+
+export function withAuthToken(url) {
+  if (!url) return '';
+  const token = getAuthToken();
+  if (!token) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}token=${encodeURIComponent(token)}`;
+}
+
+export async function downloadFile(url, fileName = '') {
+  const token = getAuthToken();
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const res = await fetch(url, { headers });
+  if (!res.ok) {
+    let msg = 'Không thể tải xuống tệp tin.';
+    try {
+      const errJson = await res.json();
+      msg = errJson.message || msg;
+    } catch (_) {}
+    throw new Error(msg);
+  }
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = fileName || 'tai_xuong';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
 }

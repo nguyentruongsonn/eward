@@ -11,5 +11,5 @@ interface FileStorage
 {
     public function storeApplicationFile(UploadedFile $file, HoSoXuLy $application, int $documentType, Nguoi $actor): TaiLieuNop;
 
-    public function download(TaiLieuNop $file): mixed;
+    public function download(TaiLieuNop $file, bool $inline = false): mixed;
 }

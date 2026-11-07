@@ -69,7 +69,7 @@ export function renderProfilePage({ navigate, searchParams }) {
         el('h3', { style: 'font-size: 15px; font-weight: 800; color: #0f172a; margin: 0;' }, displayName),
         el('div', { style: 'font-size: 11.5px; color: #64748b; margin-top: 0.2rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;' }, email),
         el('div', { style: 'margin-top: 0.5rem;' },
-          el('span', { style: 'display: inline-block; padding: 0.15rem 0.6rem; border-radius: 9999px; background: #eff6ff; color: #004482; font-size: 10.5px; font-weight: 700; border: 1px solid #bfdbfe;' }, role)
+          el('span', { style: 'display: inline-block; padding: 0.15rem 0.6rem; border-radius: 9999px; background: #eff6ff; color: #004482; font-size: 10.5px; font-weight: 700;' }, role)
         )
       );
     }

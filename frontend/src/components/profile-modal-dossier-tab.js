@@ -1,4 +1,6 @@
 import { el } from './dom.js';
+import { withAuthToken, downloadFile } from '../api/client.js';
+import { openFilePreviewModal } from './file-preview-modal.js';
 
 export function renderProfileModalDossierTab(app) {
   const rawData = app.data || app.dulieu || {};
@@ -30,15 +32,28 @@ export function renderProfileModalDossierTab(app) {
       return el('tr', { style: 'border-bottom: 1px solid #e2e8f0;' }, [
         el('td', { style: 'padding: 0.65rem 0.75rem; text-align: center; color: #64748b;' }, String(idx + 1)),
         el('td', { style: 'padding: 0.65rem 0.75rem; font-weight: 600; color: #0f172a;' }, docTitle),
-        el('td', { style: 'padding: 0.65rem 0.75rem; color: #0284c7; font-weight: 500;' }, fileName),
+        el('td', { style: 'padding: 0.65rem 0.75rem; color: #0284c7; font-weight: 500;' }, [
+          f.download_url ? el('span', {
+            style: 'cursor: pointer; text-decoration: underline;',
+            onClick: () => openFilePreviewModal({ url: f.download_url, name: fileName }),
+          }, fileName) : fileName,
+        ]),
         el('td', { style: 'padding: 0.65rem 0.75rem; color: #64748b;' }, fileSize),
         el('td', { style: 'padding: 0.65rem 0.75rem; color: #64748b; font-size: 12px;' }, uploadDate),
         el('td', { style: 'padding: 0.65rem 0.75rem; text-align: right;' }, [
           f.download_url ? el('a', {
-            href: f.download_url,
+            href: withAuthToken(f.download_url),
             target: '_blank',
             class: 'btn btn-secondary btn-sm',
-            style: 'padding: 0.2rem 0.6rem; font-size: 11.5px; text-decoration: none; background: #f0fdf4; color: #166534; font-weight: 700; border: 1px solid #bbf7d0;',
+            style: 'padding: 0.2rem 0.6rem; font-size: 11.5px; text-decoration: none; background: #f0fdf4; color: #166534; font-weight: 700; border: 1px solid #bbf7d0; cursor: pointer;',
+            onClick: async (e) => {
+              e.preventDefault();
+              try {
+                await downloadFile(f.download_url, fileName);
+              } catch (err) {
+                alert(err.message || 'Lỗi khi tải tệp.');
+              }
+            },
           }, 'Tải về') : el('span', { style: 'color: #0369a1; font-size: 11px; font-weight: 600; background: #e0f2fe; padding: 0.2rem 0.5rem; border-radius: 3px;' }, 'Bản nộp trực tuyến'),
         ]),
       ]);

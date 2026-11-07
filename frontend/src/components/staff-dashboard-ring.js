@@ -76,7 +76,7 @@ export function createPerformanceRingCard({ statusList, totalCount, prevReportDa
   }
 
   const comparisonBadge = el('div', {
-    style: `margin-top: 0.5rem; font-size: 11px; font-weight: 700; color: ${badgeColor}; background: ${badgeBg}; border: 1px solid ${badgeBorder}; border-radius: 4px; padding: 0.2rem 0.55rem; display: inline-flex; align-items: center; gap: 0.25rem; white-space: nowrap;`,
+    style: `margin-top: 0.5rem; font-size: 11px; font-weight: 700; color: ${badgeColor}; background: ${badgeBg}; border-radius: 4px; padding: 0.2rem 0.55rem; display: inline-flex; align-items: center; gap: 0.25rem; white-space: nowrap;`,
   }, badgeText);
   svgRing.append(comparisonBadge);
 

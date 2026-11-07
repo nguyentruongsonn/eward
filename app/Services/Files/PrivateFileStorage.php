@@ -13,9 +13,24 @@ use Illuminate\Support\Str;
 
 class PrivateFileStorage implements FileStorage
 {
-    private function disk(): \Illuminate\Contracts\Filesystem\Filesystem
+    private function disk(string $path = ''): \Illuminate\Contracts\Filesystem\Filesystem
     {
-        return Storage::disk(config('filesystems.private_disk', 'local'));
+        $primary = Storage::disk(config('filesystems.private_disk', 'local'));
+        if ($path === '' || $primary->exists($path)) {
+            return $primary;
+        }
+
+        foreach (['r2', 'local'] as $candidate) {
+            try {
+                $disk = Storage::disk($candidate);
+                if ($disk->exists($path)) {
+                    return $disk;
+                }
+            } catch (\Throwable) {
+            }
+        }
+
+        return $primary;
     }
 
     public function storeApplicationFile(UploadedFile $file, HoSoXuLy $application, int $documentType, Nguoi $actor): TaiLieuNop
@@ -41,11 +56,21 @@ class PrivateFileStorage implements FileStorage
         }
     }
 
-    public function download(TaiLieuNop $file): mixed
+    public function download(TaiLieuNop $file, bool $inline = false): mixed
     {
-        abort_unless($this->disk()->exists($file->duongDan), 404);
+        $disk = $this->disk($file->duongDan);
+        abort_unless($disk->exists($file->duongDan), 404);
 
-        return $this->disk()->download(
+        if ($inline) {
+            return $disk->response(
+                $file->duongDan,
+                $file->tenTep,
+                ['Content-Type' => $file->dinhDang ?: 'application/octet-stream'],
+                'inline',
+            );
+        }
+
+        return $disk->download(
             $file->duongDan,
             $file->tenTep,
             ['Content-Type' => $file->dinhDang ?: 'application/octet-stream'],

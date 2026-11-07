@@ -139,28 +139,28 @@ export function renderStaffQueuePage({ navigate, searchParams }) {
     const id = Number(st?.id ?? 1);
     const hasSup = id === 6 || String(item.notes || '').includes('Công dân đã bổ sung');
     if (hasSup && id !== 9 && id !== 10) {
-      return el('span', { style: 'font-size: 11px; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 3px; background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; white-space: nowrap;' }, 'Đã bổ sung');
+      return el('span', { style: 'font-size: 11px; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 3px; background: #e0f2fe; color: #0369a1; white-space: nowrap;' }, 'Đã bổ sung');
     }
     const label = (id === 13) ? 'Chờ thanh toán' : ((id === 12) ? 'Yêu cầu xử lý lại' : (id === 4 ? 'Chờ phê duyệt' : (id === 2 ? 'Đang thụ lý' : (st?.label || st?.name || 'Chờ tiếp nhận'))));
-    const s = id === 13 ? ['#fff7ed', '#c2410c', '#ffedd5']
-      : id === 1 ? ['#f8fafc', '#475569', '#cbd5e1']
-      : id === 2 ? ['#f0f7ff', '#0369a1', '#bae6fd']
-      : id === 4 ? ['#eff6ff', '#1d4ed8', '#bfdbfe']
-      : id === 5 ? ['#fffbeb', '#b45309', '#fed7aa']
-      : id === 6 ? ['#e0f2fe', '#0369a1', '#7dd3fc']
-      : id === 12 ? ['#fef2f2', '#b91c1c', '#fca5a5']
-      : (id === 9 || id === 10) ? ['#f0fdf4', '#15803d', '#bbf7d0']
-      : id === 3 ? ['#fef2f2', '#b91c1c', '#fecaca']
-      : ['#f8fafc', '#475569', '#cbd5e1'];
-    return el('span', { style: `font-size: 11px; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 3px; background: ${s[0]}; color: ${s[1]}; border: 1px solid ${s[2]}; white-space: nowrap;` }, label);
+    const s = id === 13 ? ['#fff7ed', '#c2410c']
+      : id === 1 ? ['#f8fafc', '#475569']
+      : id === 2 ? ['#f0f7ff', '#0369a1']
+      : id === 4 ? ['#eff6ff', '#1d4ed8']
+      : id === 5 ? ['#fffbeb', '#b45309']
+      : id === 6 ? ['#e0f2fe', '#0369a1']
+      : id === 12 ? ['#fef2f2', '#b91c1c']
+      : (id === 9 || id === 10) ? ['#f0fdf4', '#15803d']
+      : id === 3 ? ['#fef2f2', '#b91c1c']
+      : ['#f8fafc', '#475569'];
+    return el('span', { style: `font-size: 11px; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 3px; background: ${s[0]}; color: ${s[1]}; white-space: nowrap;` }, label);
   }
 
   function getPaymentBadge(item) {
     const ps = item.payment_status;
     const fee = Number(item.fee ?? ps?.fee ?? 0);
-    if (fee <= 0 || ps?.is_free) return el('span', { style: 'font-size: 11px; font-weight: 600; padding: 0.15rem 0.45rem; border-radius: 3px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; white-space: nowrap;' }, 'Miễn phí');
-    if (ps?.is_paid) return el('span', { style: 'font-size: 11px; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 3px; background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; white-space: nowrap;' }, 'Đã nộp phí');
-    return el('span', { style: 'font-size: 11px; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 3px; background: #fffbeb; color: #b45309; border: 1px solid #fed7aa; white-space: nowrap;' }, 'Chưa nộp phí');
+    if (fee <= 0 || ps?.is_free) return el('span', { style: 'font-size: 11px; font-weight: 600; padding: 0.15rem 0.45rem; border-radius: 3px; background: #f1f5f9; color: #475569; white-space: nowrap;' }, 'Miễn phí');
+    if (ps?.is_paid) return el('span', { style: 'font-size: 11px; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 3px; background: #f0fdf4; color: #15803d; white-space: nowrap;' }, 'Đã nộp phí');
+    return el('span', { style: 'font-size: 11px; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 3px; background: #fffbeb; color: #b45309; white-space: nowrap;' }, 'Chưa nộp phí');
   }
 
   async function loadQueue() {

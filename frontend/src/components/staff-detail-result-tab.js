@@ -1,8 +1,9 @@
 import { el } from './dom.js';
-import { api, getStoredUser } from '../api/client.js';
+import { api, getStoredUser, withAuthToken, downloadFile } from '../api/client.js';
 import { normalizeStaffRole } from './staff-nav.js';
 import { showToast } from './toast.js';
 import { openFilePreviewModal } from './file-preview-modal.js';
+import { createResultMenu } from './staff-detail-audit.js';
 
 function field(label, val, filled) {
   return el('div', { style: 'display: flex; flex-direction: column; gap: 0.35rem;' }, [
@@ -73,35 +74,14 @@ export function renderStaffResultTab(app, onRefresh) {
         resultFiles.map(rf => el('div', { style: 'display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; flex-wrap: wrap; gap: 0.5rem;' }, [
           el('div', {}, [
             el('strong', { style: 'font-size: 13px; color: #166534;' }, rf.name || 'Văn bản kết quả điện tử'),
-            rf.signed ? el('span', { style: 'margin-left: 0.5rem; font-size: 11px; background: #dcfce7; color: #166534; padding: 0.1rem 0.4rem; border-radius: 3px;' }, 'Đã ký số') : null,
+            rf.signed ? el('span', {
+              style: 'margin-left: 0.5rem; font-size: 11px; font-weight: 700; background: #dcfce7; color: #166534; padding: 0.15rem 0.5rem; border-radius: 3px; border: 1px solid #86efac;',
+              title: rf.signed_at ? `Ký lúc: ${rf.signed_at}` : 'Đã đóng dấu mộc đỏ điện tử',
+            }, '✓ Đã ký số & Đóng dấu') : el('span', {
+              style: 'margin-left: 0.5rem; font-size: 11px; color: #b45309; background: #fef3c7; padding: 0.15rem 0.45rem; border-radius: 3px; border: 1px solid #fde68a;',
+            }, 'Chưa ký số'),
           ]),
-          el('div', { style: 'display: flex; gap: 0.4rem; align-items: center;' }, [
-            rf.download_url ? el('button', {
-              type: 'button', class: 'btn btn-secondary btn-sm',
-              style: 'font-size: 11.5px; font-weight: 700; background: #ffffff; color: #004482; border: 1px solid #cbd5e1; padding: 0.25rem 0.65rem;',
-              onClick: () => openFilePreviewModal({ url: rf.download_url, name: rf.name }),
-            }, 'Xem trước') : null,
-            rf.download_url ? el('a', {
-              href: rf.download_url, target: '_blank',
-              style: 'font-size: 11.5px; font-weight: 700; text-decoration: none; background: #dcfce7; color: #166534; border: 1px solid #86efac; padding: 0.25rem 0.65rem; border-radius: 4px;',
-            }, 'Tải về') : null,
-            isLeader ? el('button', {
-              type: 'button', class: 'btn btn-sm',
-              style: 'font-size: 11.5px; font-weight: 700; background: #ffffff; color: #b91c1c; border: 1px solid #fca5a5; padding: 0.25rem 0.65rem;',
-              onClick: async () => {
-                if (!confirm(`Xác nhận hủy văn bản kết quả "${rf.name || 'này'}"?`)) return;
-                try {
-                  await api.delete(`/admin/applications/${app.id}/result-files/${rf.id}`);
-                  const msg = `Lãnh đạo đã hủy tệp kết quả xử lý: "${rf.name || rf.id}"`;
-                  await api.post(`/admin/applications/${app.id}/comments`, { content: msg, comment: msg }).catch(() => {});
-                  showToast.success('Đã hủy tệp kết quả xử lý.');
-                  if (typeof onRefresh === 'function') onRefresh();
-                } catch (err) {
-                  showToast.error(err.message || 'Lỗi khi hủy tệp kết quả.');
-                }
-              },
-            }, 'Hủy') : null,
-          ]),
+          createResultMenu(rf, app, onRefresh),
         ]))
       )
     : el('div', {

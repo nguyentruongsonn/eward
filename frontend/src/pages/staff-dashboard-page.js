@@ -156,7 +156,7 @@ export function renderStaffDashboardPage({ navigate }) {
       style: "display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.85rem;",
     }, counterEntries.map(c => el("div", {
       class: "card",
-      style: `padding: 1.1rem 1.25rem; background: #ffffff; border: 1px solid #d0d7de; border-left: 4px solid ${c.color}; border-radius: 6px; cursor: pointer; transition: all 0.15s ease; box-shadow: 0 1px 3px rgba(15,23,42,0.04);`,
+      style: `padding: 1.1rem 1.25rem; background: #ffffff; border: 1px solid #d0d7de; border-radius: 6px; cursor: pointer; transition: all 0.15s ease; box-shadow: 0 1px 3px rgba(15,23,42,0.04);`,
       onClick: () => navigate(c.path),
       onmouseenter: (e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(15,23,42,0.08)'; },
       onmouseleave: (e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(15,23,42,0.04)'; },
